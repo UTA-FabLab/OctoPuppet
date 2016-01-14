@@ -42,7 +42,7 @@
             <span class="btn btn-primary fileinput-button span6" data-bind="css: {disabled: !$root.loginState.isUser()}" style="margin-bottom: 10px">
                                 <i class="icon-upload-alt icon-white"></i>
                                 <span>{{ _('Upload') }}</span>
-                                <input id="gcode_upload" type="file" name="file" class="fileinput-button" data-bind="enable: loginState.isUser()">
+                                <input  id="gcode_upload" type="file" name="file" class="fileinput-button" data-bind="enable: loginState.isUser()">
                             </span>
             <span class="btn btn-primary fileinput-button span6" data-bind="css: {disabled: !$root.loginState.isUser() || !$root.isSdReady()}" style="margin-bottom: 10px">
                                 <i class="icon-upload-alt icon-white"></i>
@@ -64,3 +64,35 @@
         <small class="muted">{{ _('Hint: You can also drag and drop files on this page to upload them.') }}</small>
     </div>
 </div>
+
+<div hidden="true" class="modal fade" id="studentIdModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Enter Student ID</h4>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="studentId"/>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button id="studentIdVerification" type="button" class="btn btn-success" data-dismiss="modal" >Ok</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script type="text/javascript">
+{#    $(".fileinput-button").on("click",function(e)#}
+{#    {#}
+{#        //data-form-data='{"userdata": "{\"studentid\": \"111111\"}"}'#}
+{#        console.log("click")#}
+{#        if($("#gcode_upload").data("form-data") == "")#}
+{#        {#}
+{#            e.preventDefault();#}
+{#            $("#studentIdModal").modal('show');#}
+{#        }#}
+{#    });#}
+</script>
+

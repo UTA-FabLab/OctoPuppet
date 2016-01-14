@@ -162,6 +162,7 @@ $(function() {
 
         self.fromResponse = function(response, filenameToFocus, locationToFocus) {
             var files = response.files;
+            console.log(response);
             _.each(files, function(element, index, list) {
                 if (!element.hasOwnProperty("size")) element.size = undefined;
                 if (!element.hasOwnProperty("date")) element.date = undefined;
@@ -312,6 +313,7 @@ $(function() {
         };
 
         self.getAdditionalData = function(data) {
+
             var output = "";
             if (data["gcodeAnalysis"]) {
                 if (data["gcodeAnalysis"]["filament"] && typeof(data["gcodeAnalysis"]["filament"]) == "object") {
@@ -388,6 +390,7 @@ $(function() {
 
             self.uploadButton = $("#gcode_upload");
             function gcode_upload_done(e, data) {
+
                 var filename = undefined;
                 var location = undefined;
                 if (data.result.files.hasOwnProperty("sdcard")) {
@@ -425,6 +428,8 @@ $(function() {
             }
 
             function gcode_upload_progress(e, data) {
+
+                //alert($(self.uploadButton).data("studentid"));
                 var progress = parseInt(data.loaded / data.total * 100, 10);
                 $("#gcode_upload_progress .bar").css("width", progress + "%");
                 $("#gcode_upload_progress .bar").text(gettext("Uploading ..."));
@@ -441,7 +446,21 @@ $(function() {
                     dropZone: localTarget,
                     done: gcode_upload_done,
                     fail: gcode_upload_fail,
-                    progressall: gcode_upload_progress
+                    progressall: gcode_upload_progress,
+                    add: function (e, data) {
+                        $("#studentIdModal").modal('show');
+                        $("#studentIdVerification").on("click", function()
+                        {
+                            data.formData = {
+                                'userdata':JSON.stringify({
+                                    'studentid':$("#studentId").val()
+                                })
+
+                            }
+                            $("#studentId").val("")
+                            data.submit();
+                        })
+                    }
                 });
             }
 
@@ -463,7 +482,22 @@ $(function() {
                     dropZone: $("#drop_sd"),
                     done: gcode_upload_done,
                     fail: gcode_upload_fail,
-                    progressall: gcode_upload_progress
+                    progressall: gcode_upload_progress,
+                    add: function (e, data) {
+                        $("#studentIdModal").modal('show');
+                        $("#studentIdVerification").on("click", function()
+                        {
+                            if (tr)
+                            data.formData = {
+                                'userdata':JSON.stringify({
+                                    'studentid':$("#studentId").val()
+                                })
+
+                            }
+                            $("#studentId").val("")
+                            data.submit();
+                        })
+                    }
                 });
             }
 

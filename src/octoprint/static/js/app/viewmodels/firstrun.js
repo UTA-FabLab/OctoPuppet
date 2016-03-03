@@ -6,19 +6,19 @@ $(function() {
         self.password = ko.observable(undefined);
         self.confirmedPassword = ko.observable(undefined);
 
-        self.passwordMismatch = ko.computed(function() {
+        self.passwordMismatch = ko.pureComputed(function() {
             return self.password() != self.confirmedPassword();
         });
 
-        self.validUsername = ko.computed(function() {
+        self.validUsername = ko.pureComputed(function() {
             return self.username() && self.username().trim() != "";
         });
 
-        self.validPassword = ko.computed(function() {
+        self.validPassword = ko.pureComputed(function() {
             return self.password() && self.password().trim() != "";
         });
 
-        self.validData = ko.computed(function() {
+        self.validData = ko.pureComputed(function() {
             return !self.passwordMismatch() && self.validUsername() && self.validPassword();
         });
 
@@ -46,7 +46,7 @@ $(function() {
                 };
                 self._sendData(data, function() {
                     // if the user indeed disables access control, we'll need to reload the page for this to take effect
-                    //location.reload(true); // TODO: clear cache doesn't work properly, needs a better way, same issue with reloading plugins
+                    showReloadOverlay();
                 });
             });
             $("#confirmation_dialog").modal("show");

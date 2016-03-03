@@ -70,6 +70,8 @@ class VirtualPrinter():
 		self._sendWait = settings().getBoolean(["devel", "virtualPrinter", "sendWait"])
 		self._waitInterval = settings().getFloat(["devel", "virtualPrinter", "waitInterval"])
 
+		self._echoOnM117 = settings().getBoolean(["devel", "virtualPrinter", "echoOnM117"])
+
 		self.currentLine = 0
 		self.lastN = 0
 
@@ -234,7 +236,8 @@ class VirtualPrinter():
 				continue
 			elif "M117" in data:
 				# we'll just use this to echo a message, to allow playing around with pause triggers
-				self.outgoing.put("echo:%s" % re.search("M117\s+(.*)", data).group(1))
+				if self._echoOnM117:
+					self.outgoing.put("echo:%s" % re.search("M117\s+(.*)", data).group(1))
 			elif "M999" in data:
 				# mirror Marlin behaviour
 				self.outgoing.put("Resend: 1")
@@ -335,6 +338,8 @@ class VirtualPrinter():
 			self._triggerResend(expected=self.lastN)
 		elif data == "drop_connection":
 			self._debug_drop_connection = True
+		elif data == "maxtemp_error":
+			self.outgoing.put("Error: MAXTEMP triggered!")
 		else:
 			try:
 				sleep_match = VirtualPrinter.sleep_regex.match(data)
@@ -582,6 +587,7 @@ class VirtualPrinter():
 	def _finishSdFile(self):
 		self._writingToSd = False
 		self._selectedSdFile = None
+		self.outgoing.put("Done saving file")
 
 	def _sdPrintingWorker(self):
 		self._selectedSdFilePos = 0

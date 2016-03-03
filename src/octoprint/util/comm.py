@@ -242,6 +242,9 @@ class MachineCom(object):
 		self._resendSwallowRepetitions = settings().getBoolean(["feature", "ignoreIdenticalResends"])
 		self._resendSwallowRepetitionsCounter = 0
 
+		self._disconnect_on_errors = settings().getBoolean(["serial", "disconnectOnErrors"])
+		self._ignore_errors = settings().getBoolean(["serial", "ignoreErrorsFromFirmware"])
+
 		self._clear_to_send = CountedEvent(max=10, name="comm.clear_to_send")
 		self._send_queue = TypedQueue()
 		self._temperature_timer = None
@@ -268,6 +271,7 @@ class MachineCom(object):
 		self._sdFiles = []
 		self._sdFileToSelect = None
 		self._ignore_select = False
+		self._manualStreaming = False
 
 		# print job
 		self._currentFile = None
@@ -308,6 +312,7 @@ class MachineCom(object):
 				self._callback.on_comm_sd_files([])
 
 			if self._currentFile is not None:
+				self._recordFilePosition()
 				self._currentFile.close()
 
 		oldState = self.getStateString()
@@ -555,7 +560,7 @@ class MachineCom(object):
 			self.sendCommand(line)
 		return "\n".join(scriptLines)
 
-	def startPrint(self):
+	def startPrint(self, pos=None):
 		if not self.isOperational() or self.isPrinting():
 			return
 
@@ -583,19 +588,26 @@ class MachineCom(object):
 			self.sendGcodeScript("beforePrintStarted", replacements=dict(event=payload))
 
 			if self.isSdFileSelected():
-				#self.sendCommand("M26 S0") # setting the sd post apparently sometimes doesn't work, so we re-select
+				#self.sendCommand("M26 S0") # setting the sd pos apparently sometimes doesn't work, so we re-select
 				                            # the file instead
 
 				# make sure to ignore the "file selected" later on, otherwise we'll reset our progress data
 				self._ignore_select = True
 				self.sendCommand("M23 {filename}".format(filename=self._currentFile.getFilename()))
-				self._currentFile.setFilepos(0)
+				if pos is not None and isinstance(pos, int) and pos > 0:
+					self._currentFile.setFilepos(pos)
+					self.sendCommand("M26 S{}".format(pos))
+				else:
+					self._currentFile.setFilepos(0)
 
 				self.sendCommand("M24")
 
 				self._sd_status_timer = RepeatedTimer(lambda: get_interval("sdStatus", default_value=1.0), self._poll_sd_status, run_first=True)
 				self._sd_status_timer.start()
 			else:
+				if pos is not None and isinstance(pos, int) and pos > 0:
+					self._currentFile.seek(pos)
+
 				line = self._getNext()
 				if line is not None:
 					self.sendCommand(line)
@@ -647,7 +659,7 @@ class MachineCom(object):
 		eventManager().fire(Events.FILE_DESELECTED)
 		self._callback.on_comm_file_selected(None, None, False)
 
-	def cancelPrint(self):
+	def cancelPrint(self, firmware_error=None):
 		if not self.isOperational() or self.isStreaming():
 			return
 
@@ -662,10 +674,13 @@ class MachineCom(object):
 				except:
 					pass
 
+		self._recordFilePosition()
+
 		payload = {
 			"file": self._currentFile.getFilename(),
 			"filename": os.path.basename(self._currentFile.getFilename()),
-			"origin": self._currentFile.getFileLocation()
+			"origin": self._currentFile.getFileLocation(),
+			"firmwareError": firmware_error
 		}
 
 		self.sendGcodeScript("afterPrintCancelled", replacements=dict(event=payload))
@@ -787,6 +802,18 @@ class MachineCom(object):
 
 		self._callback.on_comm_sd_state_change(self._sdAvailable)
 		self._callback.on_comm_sd_files(self._sdFiles)
+
+	##~~ record aborted file positions
+
+	def _recordFilePosition(self):
+		if self._currentFile is None:
+			return
+
+		origin = self._currentFile.getFileLocation()
+		filename = self._currentFile.getFilename()
+		pos = self._currentFile.getFilepos()
+
+		self._callback.on_comm_record_fileposition(origin, filename, pos)
 
 	##~~ communication monitoring and handling
 
@@ -1009,15 +1036,14 @@ class MachineCom(object):
 				elif 'File selected' in line:
 					if self._ignore_select:
 						self._ignore_select = False
-					elif self._currentFile is not None:
+					elif self._currentFile is not None and self.isSdFileSelected():
 						# final answer to M23, at least on Marlin, Repetier and Sprinter: "File selected"
 						self._callback.on_comm_file_selected(self._currentFile.getFilename(), self._currentFile.getFilesize(), True)
 						eventManager().fire(Events.FILE_SELECTED, {
 							"file": self._currentFile.getFilename(),
 							"origin": self._currentFile.getFileLocation()
 						})
-				elif 'Writing to file' in line:
-					# anwer to M28, at least on Marlin, Repetier and Sprinter: "Writing to file: %s"
+				elif 'Writing to file' in line and self.isStreaming():
 					self._changeState(self.STATE_PRINTING)
 					self._clear_to_send.set()
 					line = "ok"
@@ -1117,13 +1143,7 @@ class MachineCom(object):
 				### Operational
 				elif self._state == self.STATE_OPERATIONAL or self._state == self.STATE_PAUSED:
 					if "ok" in line:
-						# if we still have commands to process, process them
-						if self._resendSwallowNextOk:
-							self._resendSwallowNextOk = False
-						elif self._resendDelta is not None:
-							self._resendNextCommand()
-						elif self._sendFromQueue():
-							pass
+						self._handle_ok()
 
 					# resend -> start resend procedure from requested line
 					elif line.lower().startswith("resend") or line.lower().startswith("rs"):
@@ -1141,18 +1161,8 @@ class MachineCom(object):
 
 					if "ok" in line or (supportWait and "wait" in line):
 						# a wait while printing means our printer's buffer ran out, probably due to some ok getting
-						# swallowed, so we treat it the same as an ok here teo take up communication again
-						if self._resendSwallowNextOk:
-							self._resendSwallowNextOk = False
-
-						elif self._resendDelta is not None:
-							self._resendNextCommand()
-
-						else:
-							if self._sendFromQueue():
-								pass
-							elif not self.isSdPrinting():
-								self._sendNext()
+						# swallowed, so we treat it the same as an ok here to take up communication again
+						self._handle_ok()
 
 					elif line.lower().startswith("resend") or line.lower().startswith("rs"):
 						self._handleResendRequest(line)
@@ -1165,6 +1175,24 @@ class MachineCom(object):
 				self._changeState(self.STATE_ERROR)
 				eventManager().fire(Events.ERROR, {"error": self.getErrorString()})
 		self._log("Connection closed, closing down monitor")
+
+	def _handle_ok(self):
+		if not self._state in (self.STATE_PRINTING, self.STATE_OPERATIONAL, self.STATE_PAUSED):
+			return
+
+		if self._resendSwallowNextOk:
+			self._resendSwallowNextOk = False
+		elif self._resendDelta is not None:
+			self._resendNextCommand()
+		else:
+			self._continue_sending()
+
+	def _continue_sending(self):
+		if self._state == self.STATE_PRINTING:
+			if not self._sendFromQueue() and not self.isSdPrinting():
+				self._sendNext()
+		elif self._state == self.STATE_OPERATIONAL or self._state == self.STATE_PAUSED:
+			self._sendFromQueue()
 
 	def _process_registered_message(self, line, feedback_matcher, feedback_controls, feedback_errors):
 		feedback_match = feedback_matcher.search(line)
@@ -1209,7 +1237,7 @@ class MachineCom(object):
 		will be done.
 		"""
 
-		if self.isOperational() and not self.isStreaming() and not self._long_running_command and not self._heating:
+		if self.isOperational() and not self.isStreaming() and not self._long_running_command and not self._heating and not self._manualStreaming:
 			self.sendCommand("M105", cmd_type="temperature_poll")
 
 	def _poll_sd_status(self):
@@ -1240,20 +1268,29 @@ class MachineCom(object):
 		self.sendGcodeScript("afterPrinterConnected", replacements=dict(event=payload))
 
 	def _sendFromQueue(self):
-		if not self._commandQueue.empty() and not self.isStreaming():
+		# We loop here to make sure that if we do NOT send the first command
+		# from the queue, we'll send the second (if there is one). We do not
+		# want to get stuck here by throwing away commands.
+		while True:
+			if self._commandQueue.empty() or self.isStreaming():
+				# no command queue or irrelevant command queue => return
+				return False
+
 			entry = self._commandQueue.get()
 			if isinstance(entry, tuple):
 				if not len(entry) == 2:
-					return False
+					# something with that entry is broken, ignore it and fetch
+					# the next one
+					continue
 				cmd, cmd_type = entry
 			else:
 				cmd = entry
 				cmd_type = None
 
-			self._sendCommand(cmd, cmd_type=cmd_type)
-			return True
-		else:
-			return False
+			if self._sendCommand(cmd, cmd_type=cmd_type):
+				# we actually did add this cmd to the send queue, so let's
+				# return, we are done here
+				return True
 
 	def _detectPort(self, close):
 		programmer = stk500v2.Stk500v2()
@@ -1360,9 +1397,18 @@ class MachineCom(object):
 				#Ignore unkown command errors, it could be a typo or some missing feature
 				pass
 			elif not self.isError():
-				self._errorValue = line[6:] if line.startswith("Error:") else line[2:]
-				self._changeState(self.STATE_ERROR)
-				eventManager().fire(Events.ERROR, {"error": self.getErrorString()})
+				error_text = line[6:] if line.startswith("Error:") else line[2:]
+				if not self._ignore_errors:
+					if self._disconnect_on_errors:
+						self._errorValue = error_text
+						self._changeState(self.STATE_ERROR)
+						eventManager().fire(Events.ERROR, {"error": self.getErrorString()})
+					elif self.isPrinting():
+						self.cancelPrint(firmware_error=error_text)
+						self._clear_to_send.set()
+				else:
+					self._log("WARNING! Received an error from the printer's firmware, ignoring that as configured but you might want to investigate what happened here! Error: {}".format(error_text))
+					self._clear_to_send.set()
 		return line
 
 	def _readline(self):
@@ -1391,6 +1437,9 @@ class MachineCom(object):
 		return ret
 
 	def _getNext(self):
+		if self._currentFile is None:
+			return None
+
 		line = self._currentFile.getNext()
 		if line is None:
 			if self.isStreaming():
@@ -1499,7 +1548,7 @@ class MachineCom(object):
 		# Make sure we are only handling one sending job at a time
 		with self._sendingLock:
 			if self._serial is None:
-				return
+				return False
 
 			gcode = None
 			if not self.isStreaming():
@@ -1508,7 +1557,7 @@ class MachineCom(object):
 
 				if cmd is None:
 					# command is no more, return
-					return
+					return False
 
 				if gcode and gcode in gcodeToEvent:
 					# if this is a gcode bound to an event, trigger that now
@@ -1520,6 +1569,8 @@ class MachineCom(object):
 			if not self.isStreaming():
 				# trigger the "queued" phase only if we are not streaming to sd right now
 				self._process_command_phase("queued", cmd, cmd_type, gcode=gcode)
+
+			return True
 
 	##~~ send loop handling
 
@@ -1573,7 +1624,14 @@ class MachineCom(object):
 					command, _, gcode = self._process_command_phase("sending", command, command_type, gcode=gcode)
 
 					if command is None:
-						# so no, we are not going to send this, that was a last-minute bail, let's fetch the next item from the queue
+						# No, we are not going to send this, that was a last-minute bail.
+						# However, since we already are in the send queue, our _monitor
+						# loop won't be triggered with the reply from this unsent command
+						# now, so we try to tickle the processing of any active
+						# command queues manually
+						self._continue_sending()
+
+						# and now let's fetch the next item from the queue
 						continue
 
 					# now comes the part where we increase line numbers and send stuff - no turning back now
@@ -1592,9 +1650,14 @@ class MachineCom(object):
 				if gcode is not None:
 					use_up_clear = True
 
-				# if we need to use up a clear, do that now
 				if use_up_clear:
+					# if we need to use up a clear, do that now
 					self._clear_to_send.clear()
+				else:
+					# Otherwise we need to tickle the read queue - there might not be a reply
+					# to this command, so our _monitor loop will stay waiting until timeout. We
+					# definitely do not want that, so we tickle the queue manually here
+					self._continue_sending()
 
 				# now we just wait for the next clear and then start again
 				self._clear_to_send.wait()
@@ -1734,6 +1797,16 @@ class MachineCom(object):
 		# for GCODE induced pausing. Send it to the printer anyway though.
 		if self.isPrinting() and not self.isSdPrinting():
 			self.setPause(True)
+
+	def _gcode_M28_sent(self, cmd, cmd_type=None):
+		if not self.isStreaming():
+			self._log("Detected manual streaming. Disabling temperature polling. Finish writing with M29. Do NOT attempt to print while manually streaming!")
+			self._manualStreaming = True
+
+	def _gcode_M29_sent(self, cmd, cmd_type=None):
+		if self._manualStreaming:
+			self._log("Manual streaming done. Re-enabling temperature polling. All is well.")
+			self._manualStreaming = False
 
 	def _gcode_M140_queuing(self, cmd, cmd_type=None):
 		if not self._printerProfileManager.get_current_or_default()["heatedBed"]:
@@ -1891,6 +1964,9 @@ class MachineComPrintCallback(object):
 	def on_comm_force_disconnect(self):
 		pass
 
+	def on_comm_record_fileposition(self, origin, name, pos):
+		pass
+
 ### Printing file information classes ##################################################################################
 
 class PrintingFileInformation(object):
@@ -1988,6 +2064,13 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
 			raise IOError("File %s does not exist" % self._filename)
 		self._size = os.stat(self._filename).st_size
 		self._pos = 0
+
+	def seek(self, offset):
+		if self._handle is None:
+			return
+
+		self._handle.seek(offset)
+		self._pos = self._handle.tell()
 
 	def start(self):
 		"""

@@ -2,8 +2,8 @@ $(function() {
     function LoginStateViewModel() {
         var self = this;
 
-        self.loginUser = ko.observable();
-        self.loginPass = ko.observable();
+        self.loginUser = ko.observable("");
+        self.loginPass = ko.observable("");
         self.loginRemember = ko.observable(false);
 
         self.loggedIn = ko.observable(false);
@@ -15,7 +15,7 @@ $(function() {
 
         self.currentUser = ko.observable(undefined);
 
-        self.userMenuText = ko.computed(function() {
+        self.userMenuText = ko.pureComputed(function() {
             if (self.loggedIn()) {
                 return self.username();
             } else {
@@ -79,10 +79,6 @@ $(function() {
             var password = self.loginPass();
             var remember = self.loginRemember();
 
-            self.loginUser("");
-            self.loginPass("");
-            self.loginRemember(false);
-
             $.ajax({
                 url: API_BASEURL + "login",
                 type: "POST",
@@ -90,6 +86,10 @@ $(function() {
                 success: function(response) {
                     new PNotify({title: gettext("Login successful"), text: _.sprintf(gettext('You are now logged in as "%(username)s"'), {username: response.name}), type: "success"});
                     self.fromResponse(response);
+
+                    self.loginUser("");
+                    self.loginPass("");
+                    self.loginRemember(false);
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
                     new PNotify({title: gettext("Login failed"), text: gettext("User unknown or wrong password"), type: "error"});

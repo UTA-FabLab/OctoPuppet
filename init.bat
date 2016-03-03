@@ -1,0 +1,1 @@
+cmd.exe /k "D:\Git\venv\Scripts\activate" & pause

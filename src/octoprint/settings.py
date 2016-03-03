@@ -85,7 +85,9 @@ default_settings = {
 			"sdStatus": 1
 		},
 		"additionalPorts": [],
-		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32"]
+		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32"],
+		"disconnectOnErrors": True,
+		"ignoreErrorsFromFirmware": False
 	},
 	"server": {
 		"host": "0.0.0.0",
@@ -114,6 +116,10 @@ default_settings = {
 		"diskspace": {
 			"warning": 500 * 1024 * 1024, # 500 MB
 			"critical": 200 * 1024 * 1024, # 200 MB
+		},
+		"preemptiveCache": {
+			"exceptions": [],
+			"until": 7
 		}
 	},
 	"webcam": {
@@ -131,7 +137,8 @@ default_settings = {
 			"options": {},
 			"postRoll": 0,
 			"fps": 25
-		}
+		},
+		"cleanTmpAfterDays": 7
 	},
 	"gcodeViewer": {
 		"enabled": True,
@@ -263,7 +270,8 @@ default_settings = {
 	"devel": {
 		"stylesheet": "css",
 		"cache": {
-			"enabled": True
+			"enabled": True,
+			"preemptive": True
 		},
 		"webassets": {
 			"minify": False,
@@ -296,7 +304,8 @@ default_settings = {
 			"commandBuffer": 4,
 			"sendWait": True,
 			"waitInterval": 1.0,
-			"supportM112": True
+			"supportM112": True,
+			"echoOnM117": True
 		}
 	}
 }

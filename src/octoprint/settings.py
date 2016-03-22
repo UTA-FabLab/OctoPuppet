@@ -85,9 +85,15 @@ default_settings = {
 			"sdStatus": 1
 		},
 		"additionalPorts": [],
-		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32"],
+		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32", "M400", "M226"],
+		"checksumRequiringCommands": ["M110"],
+		"helloCommand": "M110 N0",
 		"disconnectOnErrors": True,
-		"ignoreErrorsFromFirmware": False
+		"ignoreErrorsFromFirmware": False,
+		"logResends": False,
+
+		# command specific flags
+		"triggerOkForM29": True
 	},
 	"server": {
 		"host": "0.0.0.0",
@@ -305,7 +311,8 @@ default_settings = {
 			"sendWait": True,
 			"waitInterval": 1.0,
 			"supportM112": True,
-			"echoOnM117": True
+			"echoOnM117": True,
+			"brokenM29": True
 		}
 	}
 }

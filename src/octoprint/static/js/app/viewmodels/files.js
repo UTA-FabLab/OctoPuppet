@@ -483,7 +483,7 @@ $(function() {
 
         self._enableSdDropzone = function(enable) {
             var options = {
-                url: API_BASEURL + "files/local",
+                url: API_BASEURL + "files/sdcard",
                 dataType: "json",
                 dropZone: enable ? self.sdTarget : null,
                 done: self._handleUploadDone,

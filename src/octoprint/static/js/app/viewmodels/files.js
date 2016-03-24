@@ -465,9 +465,18 @@ $(function() {
                 progressall: self._handleUploadProgress,
                 add: function (e, data) {
                         $("#studentIdModal").modal('show');
+						$("#studentIdModal").on('shown', function() {
+							$("#studentId").focus();
+						})
                         $("#studentIdVerification").on("click", function()
                         {
-                            data.formData = {
+
+							if($("#studentId").val().length == 0)
+							{
+								e.preventDefault();
+								$("#studentIdModal").modal('show');
+							}
+							data.formData = {
                                 'userdata':JSON.stringify({
                                     'studentid':$("#studentId").val()
                                 })
@@ -491,6 +500,9 @@ $(function() {
                 progressall: self._handleUploadProgress,
                 add: function (e, data) {
                         $("#studentIdModal").modal('show');
+						$("#studentIdModal").on('shown', function() {
+							$("#studentId").focus();
+						})
                         $("#studentIdVerification").on("click", function()
                         {
                             if (tr)

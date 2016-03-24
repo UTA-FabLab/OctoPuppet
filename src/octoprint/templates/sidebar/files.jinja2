@@ -66,10 +66,6 @@
 </div>
 
 <script type="text/javascript">
-function disable_btn() {
-	//disable "ok"
-    document.getElementById('studentIdVerification').disabled = "true";
-}
 var studentId_input="document.getElementById('studentId')"
 function forcecard() {
 	//to make sure the entry happened from swipe card we check the time for populating text
@@ -86,26 +82,6 @@ function forcecard() {
 		alert("Please swipe your MavID. Contact a FabLab employee for assistance.");
         return false;
     }
-	else
-	{
-		id_length();
-	}
-}
-// TODO: The implementation of following function needs to be fixed.	
-function id_length(){
-	if(document.getElementById('studentId').value.length != 10)
-	{
-		//red
-		document.getElementById('studentId').style.backgroundColor = "#FFAAAA";
-		document.getElementById('studentIdVerification').disabled = "true";
-		return false;
-	}
-	else
-	{	
-		//enable "ok"
-		document.getElementById('studentId').style.backgroundColor = "#FFFFFF";
-		document.getElementById('studentIdVerification').disabled = "false";
-	}
 }
 </script>
 
@@ -117,7 +93,7 @@ function id_length(){
         <h4 class="modal-title">Enter Student ID</h4>
       </div>
       <div class="modal-body">
-        <input type="text" id="studentId" onkeydown="forcecard()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off/>
+        <input type="text" id="studentId" onkeydown="forcecard()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -126,17 +102,3 @@ function id_length(){
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
-
-<script type="text/javascript">
-{#    $(".fileinput-button").on("click",function(e)#}
-{#    {#}
-{#        //data-form-data='{"userdata": "{\"studentid\": \"111111\"}"}'#}
-{#        console.log("click")#}
-{#        if($("#gcode_upload").data("form-data") == "")#}
-{#        {#}
-{#            e.preventDefault();#}
-{#            $("#studentIdModal").modal('show');#}
-{#        }#}
-{#    });#}
-</script>
-

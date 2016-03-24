@@ -466,16 +466,20 @@ $(function() {
                 add: function (e, data) {
                         $("#studentIdModal").modal('show');
 						$("#studentIdModal").on('shown', function() {
+							$("#studentId").val('')
 							$("#studentId").focus();
-						})
+							$("#studentIdVerification").attr("disabled", "disabled");
+						});
+						$("#studentId").on('keyup',function() {
+							if ( $("#studentId").val().length == 10) {
+								$("#studentIdVerification").removeAttr("disabled"); 
+							}
+							else {
+								$("#studentIdVerification").attr("disabled", "disabled");
+							}
+						});
                         $("#studentIdVerification").on("click", function()
                         {
-
-							if($("#studentId").val().length == 0)
-							{
-								e.preventDefault();
-								$("#studentIdModal").modal('show');
-							}
 							data.formData = {
                                 'userdata':JSON.stringify({
                                     'studentid':$("#studentId").val()

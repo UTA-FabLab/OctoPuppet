@@ -465,9 +465,22 @@ $(function() {
                 progressall: self._handleUploadProgress,
                 add: function (e, data) {
                         $("#studentIdModal").modal('show');
+						$("#studentIdModal").on('shown', function() {
+							$("#studentId").val('')
+							$("#studentId").focus();
+							$("#studentIdVerification").attr("disabled", "disabled");
+						});
+						$("#studentId").on('keyup',function() {
+							if ( $("#studentId").val().length == 10) {
+								$("#studentIdVerification").removeAttr("disabled"); 
+							}
+							else {
+								$("#studentIdVerification").attr("disabled", "disabled");
+							}
+						});
                         $("#studentIdVerification").on("click", function()
                         {
-                            data.formData = {
+							data.formData = {
                                 'userdata':JSON.stringify({
                                     'studentid':$("#studentId").val()
                                 })
@@ -483,7 +496,7 @@ $(function() {
 
         self._enableSdDropzone = function(enable) {
             var options = {
-                url: API_BASEURL + "files/local",
+                url: API_BASEURL + "files/sdcard",
                 dataType: "json",
                 dropZone: enable ? self.sdTarget : null,
                 done: self._handleUploadDone,
@@ -491,6 +504,9 @@ $(function() {
                 progressall: self._handleUploadProgress,
                 add: function (e, data) {
                         $("#studentIdModal").modal('show');
+						$("#studentIdModal").on('shown', function() {
+							$("#studentId").focus();
+						})
                         $("#studentIdVerification").on("click", function()
                         {
                             if (tr)

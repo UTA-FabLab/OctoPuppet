@@ -93,7 +93,7 @@ function forcecard() {
         <h4 class="modal-title">Enter Student ID</h4>
       </div>
       <div class="modal-body">
-        <input type="text" id="studentId" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+        <input type="text" id="studentId" onkeydown="forcecard()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>

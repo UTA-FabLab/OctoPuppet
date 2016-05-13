@@ -18,3 +18,78 @@
     <button class="btn span4" id="job_pause" data-bind="click: pause, enable: enablePause, css: {active: isPaused()}, attr: {title: titlePauseButton}"><i data-bind="css: {'icon-pause': !isPaused(), 'icon-play': isPaused()}"></i> <span data-bind="visible: !isPaused()">{{ _('Pause') }}</span><span data-bind="visible: isPaused()">{{ _('Resume') }}</span></button>
     <button class="btn span4" id="job_cancel" data-bind="click: cancel, enable: enableCancel" title="{{ _('Cancels the print job') }}"><i class="icon-stop"></i> {{ _('Cancel') }}</button>
 </div>
+
+<script type="text/javascript">
+
+var last_key_time = new Date();
+var last_id_length = 0;
+
+function forcecard() {
+	var key_time = new Date();
+	var id_length = document.getElementById('studentId').value.length;
+	
+	if ( id_length == 1) {
+		last_key_time = key_time;
+	}
+	
+	if ((key_time - last_key_time) > 100){
+		document.getElementById('studentId').value="";
+		last_id_length = 0;
+		alert("please swipe your MavID card. Contact a FabLab employee for assistance.");
+		return false;
+	}
+	
+	if (id_length != last_id_length){
+		last_key_time = key_time;
+		last_id_length = id_length;
+	}
+	
+	/*	Depreciated becuse I'm awesome - Arun
+	//to make sure the entry happened from swipe card we check the time for populating text
+    if (document.getElementById('studentId').value.length == 1) {
+        startdatetime = new Date();
+    }
+	// time at tenth character
+    else if (document.getElementById('studentId').value.length == 10) {
+        enddatetime = new Date();
+        var difference_ms = enddatetime - startdatetime;
+    }
+    if (difference_ms > 100) {
+        document.getElementById('studentId').value="";
+		alert("Please swipe your MavID. Contact a FabLab employee for assistance.");
+        return false;
+    }*/
+	
+}
+
+function check_id_valid(){
+	console.log("running template based ID check");
+	var modal_ok_button = document.getElementById("studentIdVerification");
+	if ( document.getElementById('studentId').value.length == 10) {
+		modal_ok_button.removeAttribute("disabled"); 
+	}
+	else {
+		modal_ok_button.setAttribute("disabled", "disabled");
+	}
+}
+</script>
+
+<div hidden="true" class="modal fade" id="studentIdModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Swipe Mav Express Card</h4>
+      </div>
+      <div class="modal-body">
+        <p>To ensure that the UTA FabLab is an ethical learning environment, only upload files that meet the guidelines set by the UTA Fablab and the UTA Libraries. The UTA Libraries reserve the right to refuse/destroy any fabrication requests which do not meet our guidelines. Please visit http://fablab.uta.edu/policy for more information.</p>
+		<p>By swiping your Mav Express Card and pressing the "Agree" button, you agree to the guidelines set by the UTA FabLab.</p>
+		<input type="text" id="studentId" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Disagree</button>
+        <button id="studentIdVerification" type="button" class="btn btn-success" data-dismiss="modal" >Agree</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

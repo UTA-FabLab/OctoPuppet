@@ -462,34 +462,7 @@ $(function() {
                 dropZone: enable ? self.localTarget : null,
                 done: self._handleUploadDone,
                 fail: self._handleUploadFail,
-                progressall: self._handleUploadProgress,
-                add: function (e, data) {
-                        $("#studentIdModal").modal('show');
-						$("#studentIdModal").on('shown', function() {
-							$("#studentId").val('')
-							$("#studentId").focus();
-							$("#studentIdVerification").attr("disabled", "disabled");
-						});
-						$("#studentId").on('keyup',function() {
-							if ( $("#studentId").val().length == 10) {
-								$("#studentIdVerification").removeAttr("disabled"); 
-							}
-							else {
-								$("#studentIdVerification").attr("disabled", "disabled");
-							}
-						});
-                        $("#studentIdVerification").on("click", function()
-                        {
-							data.formData = {
-                                'userdata':JSON.stringify({
-                                    'studentid':$("#studentId").val()
-                                })
-
-                            }
-                            $("#studentId").val("")
-                            data.submit();
-                        })
-                    }
+                progressall: self._handleUploadProgress
             };
             self.uploadButton.fileupload(options);
         };
@@ -501,25 +474,7 @@ $(function() {
                 dropZone: enable ? self.sdTarget : null,
                 done: self._handleUploadDone,
                 fail: self._handleUploadFail,
-                progressall: self._handleUploadProgress,
-                add: function (e, data) {
-                        $("#studentIdModal").modal('show');
-						$("#studentIdModal").on('shown', function() {
-							$("#studentId").focus();
-						})
-                        $("#studentIdVerification").on("click", function()
-                        {
-                            if (tr)
-                            data.formData = {
-                                'userdata':JSON.stringify({
-                                    'studentid':$("#studentId").val()
-                                })
-
-                            }
-                            $("#studentId").val("")
-                            data.submit();
-                        })
-                    }
+                progressall: self._handleUploadProgress
             };
             self.sdUploadButton.fileupload(options);
         };

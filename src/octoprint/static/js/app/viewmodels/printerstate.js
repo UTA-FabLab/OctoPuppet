@@ -208,18 +208,78 @@ $(function() {
         };
 
         self.print = function() {
-            var restartCommand = function() {
-                self._jobCommand("restart");
-            };
-
-            if (self.isPaused()) {
-                $("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
-                $("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
-                $("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); restartCommand(); });
-                $("#confirmation_dialog").modal("show");
-            } else {
-                self._jobCommand("start");
-            }
+			$("#studentIdModal").modal('show');
+			console.log("Showing student id modal");
+			
+			$("#studentIdModal").on('shown', function() {
+				$("#studentId").val('')
+				$("#studentId").focus();
+				$("#studentIdVerification").attr("disabled", "disabled");
+			});
+			
+			$("#studentIdVerification").unbind("click").on("click", function()
+			{
+				console.log("on click function activated");
+				var trans_response = "";
+				if ( $("#studentId").val().length != 10) {
+					return false;
+				}
+				var postBody = JSON.stringify({type: "utaid", number: $("#studentId").val(), device: "DEV_ID"});
+				console.log(postBody);
+				
+				$.ajax({
+					type:"POST",
+					dataType: "json",
+					contentType: "application/json; charset=UTF-8",
+					url:"FLUD_BASE/flud.php",
+					data:postBody,
+					success: function(success_data){
+						console.log("got success back");
+						console.log(success_data);
+						trans_response = success_data;
+						console.log("Transaction ID is:");
+						console.log(trans_response["trans_id"]);
+						if (trans_response["authorized"] === "Y"){
+							
+							console.log("User Authorized");
+							
+							var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
+							$.ajax({
+								type:"POST",
+								dataType: "json",
+								contentType: "application/json; charset=UTF-8",
+								url: API_BASEURL + "files/local/" + self.filename(),
+								data:tranBody,
+								success: function(response){console.log("Successfully saved data");
+															console.log(response);}
+							});
+							
+							console.log(self.filename());
+							
+							if (self.isPaused()) {
+								$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
+								$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
+								$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
+								$("#confirmation_dialog").modal("show");
+							} else {
+								self._jobCommand("start");
+							}
+							
+						}
+						else {
+							console.log("User Not Authorized!");
+							$("#studentIdModal").modal('hide');
+							return false;
+						}
+						},
+					failure: function(errMsg){
+						console.log("errored out");
+						console.log(errMsg);
+						}
+				});
+			});
+			
+			
 
         };
 

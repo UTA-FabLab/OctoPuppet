@@ -239,42 +239,53 @@ $(function() {
 						trans_response = success_data;
 						console.log("Transaction ID is:");
 						console.log(trans_response["trans_id"]);
-						if (trans_response["authorized"] === "Y"){
-							
-							console.log("User Authorized");
-							
-							var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
-							$.ajax({
-								type:"POST",
-								dataType: "json",
-								contentType: "application/json; charset=UTF-8",
-								url: API_BASEURL + "files/local/" + self.filename(),
-								data:tranBody,
-								success: function(response){console.log("Successfully saved data");
-															console.log(response);}
-							});
-							
-							console.log(self.filename());
-							
-							if (self.isPaused()) {
-								$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
-								$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
-								$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
-								$("#confirmation_dialog").modal("show");
-							} else {
-								self._jobCommand("start");
+						
+						$("#studentIdModal").modal('hide');
+						
+						if(trans_response.hasOwnProperty('authorized')){
+							if (trans_response["authorized"] === "Y"){
+								
+								console.log("User Authorized");
+								
+								var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
+								$.ajax({
+									type:"POST",
+									dataType: "json",
+									contentType: "application/json; charset=UTF-8",
+									url: API_BASEURL + "files/local/" + self.filename(),
+									data:tranBody,
+									success: function(response){console.log("Successfully saved trasaction ID data");
+																console.log(response);}
+								});
+								
+								console.log(self.filename());
+								
+								if (self.isPaused()) {
+									$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
+									$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
+									$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
+									$("#confirmation_dialog").modal("show");
+								} else {
+									self._jobCommand("start");
+								}
+								
 							}
-							
+							else {
+								alert("User Not Authorized!");
+								return false;
+							}
 						}
-						else {
-							console.log("User Not Authorized!");
-							$("#studentIdModal").modal('hide');
-							return false;
+						
+						if(trans_response.hasOwnProperty('ERROR')){
+							alert(trans_response["ERROR"]);
 						}
+						
 						},
 					failure: function(errMsg){
-						console.log("errored out");
+						$("#studentIdModal").modal('hide');
+						console.log("Connection to flud.php timed out. Error details:");
 						console.log(errMsg);
+						alert("Timeout error. Please inform current supervisor.");
 						}
 				});
 			});

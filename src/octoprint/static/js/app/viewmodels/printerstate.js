@@ -211,6 +211,61 @@ $(function() {
 			$("#studentIdModal").modal('show');
 			console.log("Showing student id modal");
 			
+			var m_request_body = JSON.stringify({type: "device_id", device: "DEV_ID"});
+			
+			console.log(m_request_body);
+			
+			$.ajax({
+				url: "FLUD_BASE/materials.php",
+				type:"POST",
+				dataType: "json",
+				contentType: "application/json; charset=UTF-8",
+				data: m_request_body,
+				success: function(data)
+				{
+					console.log("Got response from materials.php");
+					console.log(data);
+					
+					var f_selector = document.getElementById("sel_filament");
+					
+					f_selector.options.length = 0;
+					
+					for ( var i = 0; i < data.length; i++) {
+						var f_item = data[i], id = f_item.m_id, desc = "($" +f_item.price + "/" + f_item.unit + ") - " + f_item.m_name;
+						var option = document.createElement("option");
+						option.value = id;
+						option.textContent = desc;
+						f_selector.appendChild(option);
+					};
+					
+				}
+			});
+			
+			$.ajax({
+				url: "FLUD_BASE/purpose.php",
+				dataType: 'json',
+				type: "GET",
+				success: function(data)
+				{
+					console.log("Got response from purpose.php");
+					console.log(data);
+					
+					var p_selector = document.getElementById("sel_purpose");
+					
+					p_selector.options.length = 0;
+					
+					for ( var i = 0; i < data.length; i++) {
+						var p_item = data[i], p_id = p_item.purp_id, p_desc = p_item.purpose
+						var option = document.createElement("option");
+						option.value = p_id;
+						option.textContent = p_desc;
+						p_selector.appendChild(option);
+					};
+				}
+			});
+			
+			console.log("sent AJAX requests for purpose and materials");
+			
 			$("#studentIdModal").on('shown', function() {
 				$("#studentId").val('');
 				$("#studentId").focus();

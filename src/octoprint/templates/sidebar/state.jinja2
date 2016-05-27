@@ -72,6 +72,7 @@ function check_id_valid(){
 		modal_ok_button.setAttribute("disabled", "disabled");
 	}
 }
+	
 </script>
 
 <div hidden="true" class="modal fade" id="studentIdModal" tabindex="-1" role="dialog">
@@ -85,7 +86,17 @@ function check_id_valid(){
         <p>To ensure that the UTA FabLab is an ethical learning environment, only upload files that meet the guidelines set by the UTA Fablab and the UTA Libraries. The UTA Libraries reserve the right to refuse/destroy any fabrication requests which do not meet our guidelines. Please visit http://fablab.uta.edu/policy for more information.</p>
 		<p>By swiping your Mav Express Card and pressing the "Agree" button, you agree to the guidelines set by the UTA FabLab.</p>
 		<input type="text" id="studentId" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
-      </div>
+		<p>Select Filament:
+			<select id="sel_filament">
+				<option id="sel_filament_default_option" value="" disabled selected>Loading...</option>
+			</select>
+		</p>
+		<p>Purpose of visit:
+			<select id="sel_purpose">
+				<option id="sel_purpose_default_option" value="" disabled selected>Loading...</option>
+			</select>
+		</p>
+	  </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" data-dismiss="modal">Disagree</button>
         <button id="studentIdVerification" type="button" class="btn btn-success" data-dismiss="modal" >Agree</button>

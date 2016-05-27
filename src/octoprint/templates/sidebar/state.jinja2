@@ -25,6 +25,7 @@ var last_key_time = new Date();
 var last_id_length = 0;
 
 function forcecard() {
+/*
 	var key_time = new Date();
 	var id_length = document.getElementById('studentId').value.length;
 	
@@ -42,9 +43,8 @@ function forcecard() {
 	if (id_length != last_id_length){
 		last_key_time = key_time;
 		last_id_length = id_length;
-	}
-	
-	/*	Depreciated becuse I'm awesome - Arun
+	}*/
+
 	//to make sure the entry happened from swipe card we check the time for populating text
     if (document.getElementById('studentId').value.length == 1) {
         startdatetime = new Date();
@@ -58,7 +58,7 @@ function forcecard() {
         document.getElementById('studentId').value="";
 		alert("Please swipe your MavID. Contact a FabLab employee for assistance.");
         return false;
-    }*/
+    }
 	
 }
 

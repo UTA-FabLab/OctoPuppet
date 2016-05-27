@@ -212,7 +212,7 @@ $(function() {
 			console.log("Showing student id modal");
 			
 			$("#studentIdModal").on('shown', function() {
-				$("#studentId").val('')
+				$("#studentId").val('');
 				$("#studentId").focus();
 				$("#studentIdVerification").attr("disabled", "disabled");
 			});

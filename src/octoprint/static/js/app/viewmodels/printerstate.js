@@ -274,63 +274,94 @@ $(function() {
 			
 			$("#studentIdVerification").unbind("click").on("click", function()
 			{
-				console.log("on click function activated");
 				var trans_response = "";
+				
 				if ( $("#studentId").val().length != 10) {
 					return false;
 				}
-				var postBody = JSON.stringify({type: "utaid", number: $("#studentId").val(), device: "DEV_ID"});
-				console.log(postBody);
 				
 				$.ajax({
-					type:"POST",
-					dataType: "json",
+					type:"GET",
 					contentType: "application/json; charset=UTF-8",
-					url:"FLUD_BASE/flud.php",
-					data:postBody,
-					success: function(success_data){
-						console.log("got success back");
-						console.log(success_data);
-						trans_response = success_data;
-						console.log("Transaction ID is:");
-						console.log(trans_response["trans_id"]);
-						if (trans_response["authorized"] === "Y"){
-							
-							console.log("User Authorized");
-							
-							var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
-							$.ajax({
-								type:"POST",
-								dataType: "json",
-								contentType: "application/json; charset=UTF-8",
-								url: API_BASEURL + "files/local/" + self.filename(),
-								data:tranBody,
-								success: function(response){console.log("Successfully saved data");
-															console.log(response);}
-							});
-							
-							console.log(self.filename());
-							
-							if (self.isPaused()) {
-								$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
-								$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
-								$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
-								$("#confirmation_dialog").modal("show");
-							} else {
-								self._jobCommand("start");
-							}
-							
-						}
-						else {
-							console.log("User Not Authorized!");
-							$("#studentIdModal").modal('hide');
-							return false;
-						}
-						},
-					failure: function(errMsg){
-						console.log("errored out");
-						console.log(errMsg);
-						}
+					url: API_BASEURL + "files/local/" + self.filename(),
+					headers: { 'X-Api-Key': 'UTALab16' },
+					success:function (api_file_data){
+						var postBody = {type: "print", device_id: "DEV_ID"};
+						
+						postBody.uta_id = $("#studentId").val()
+						postBody.m_id = document.getElementById("sel_filament").options[document.getElementById("sel_filament").selectedIndex].value;
+						postBody.p_id = document.getElementById("sel_purpose").options[document.getElementById("sel_purpose").selectedIndex].value;
+						
+						postBody.filename = self.filename();
+						
+						postBody.est_filament_used = api_file_data.est_flmnt_vol;
+						
+						postBody.est_build_time = api_file_data.est_build_time;
+						
+						console.log(JSON.stringify(postBody));
+						
+						$.ajax({
+							type:"POST",
+							dataType: "json",
+							contentType: "application/json; charset=UTF-8",
+							url:"FLUD_BASE/flud.php",
+							data:JSON.stringify(postBody),
+							success: function(success_data){
+								console.log("got success back");
+								console.log(success_data);
+								trans_response = success_data;
+								console.log("Transaction ID is:");
+								console.log(trans_response["trans_id"]);
+								
+								$("#studentIdModal").modal('hide');
+								
+								if(trans_response.hasOwnProperty('ERROR')){
+									alert(trans_response["ERROR"]);
+								}
+								
+								if(trans_response.hasOwnProperty('authorized')){
+									if (trans_response["authorized"] === "Y"){
+										
+										console.log("User Authorized");
+										
+										var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
+										$.ajax({
+											type:"POST",
+											dataType: "json",
+											contentType: "application/json; charset=UTF-8",
+											url: API_BASEURL + "files/local/" + self.filename(),
+											data:tranBody,
+											success: function(response){console.log("Successfully saved trasaction ID data");
+																		console.log(response);}
+										});
+										
+										console.log(self.filename());
+										
+										if (self.isPaused()) {
+											$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
+											$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
+											$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
+											$("#confirmation_dialog").modal("show");
+										} else {
+											self._jobCommand("start");
+										}
+										
+									}
+									else {
+										alert("User Not Authorized!");
+										return false;
+									}
+								}
+								
+							},
+							error: function(errMsg){
+								$("#studentIdModal").modal('hide');
+								console.log("Connection to flud.php errored out. Error details:");
+								console.log(errMsg);
+								alert("Timeout error. Please inform current supervisor.");
+								}
+						});
+					}
 				});
 			});
 			

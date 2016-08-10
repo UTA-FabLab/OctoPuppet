@@ -5,6 +5,7 @@ $(function() {
         self.loginState = parameters[0];
         self.users = parameters[1];
         self.printerProfiles = parameters[2];
+        self.about = parameters[3];
 
         self.receiving = ko.observable(false);
         self.sending = ko.observable(false);
@@ -141,6 +142,7 @@ $(function() {
         self.serial_ignoreErrorsFromFirmware = ko.observable(undefined);
         self.serial_disconnectOnErrors = ko.observable(undefined);
         self.serial_triggerOkForM29 = ko.observable(undefined);
+        self.serial_supportResendsWithoutOk = ko.observable(undefined);
 
         self.folder_uploads = ko.observable(undefined);
         self.folder_timelapse = ko.observable(undefined);
@@ -460,6 +462,7 @@ $(function() {
             self.serial_ignoreErrorsFromFirmware(response.serial.ignoreErrorsFromFirmware);
             self.serial_disconnectOnErrors(response.serial.disconnectOnErrors);
             self.serial_triggerOkForM29(response.serial.triggerOkForM29);
+            self.serial_supportResendsWithoutOk(response.serial.supportResendsWithoutOk);
 
             self.folder_uploads(response.folder.uploads);
             self.folder_timelapse(response.folder.timelapse);
@@ -551,7 +554,8 @@ $(function() {
                         "helloCommand": self.serial_helloCommand(),
                         "ignoreErrorsFromFirmware": self.serial_ignoreErrorsFromFirmware(),
                         "disconnectOnErrors": self.serial_disconnectOnErrors(),
-                        "triggerOkForM29": self.serial_triggerOkForM29()
+                        "triggerOkForM29": self.serial_triggerOkForM29(),
+                        "supportResendsWithoutOk": self.serial_supportResendsWithoutOk()
                     },
                     "folder": {
                         "uploads": self.folder_uploads(),
@@ -632,7 +636,7 @@ $(function() {
 
     OCTOPRINT_VIEWMODELS.push([
         SettingsViewModel,
-        ["loginStateViewModel", "usersViewModel", "printerProfilesViewModel"],
+        ["loginStateViewModel", "usersViewModel", "printerProfilesViewModel", "aboutViewModel"],
         ["#settings_dialog", "#navbar_settings"]
     ]);
 });

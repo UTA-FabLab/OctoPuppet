@@ -208,18 +208,164 @@ $(function() {
         };
 
         self.print = function() {
-            var restartCommand = function() {
-                self._jobCommand("restart");
-            };
-
-            if (self.isPaused()) {
-                $("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
-                $("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
-                $("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); restartCommand(); });
-                $("#confirmation_dialog").modal("show");
-            } else {
-                self._jobCommand("start");
-            }
+			$("#studentIdModal").modal('show');
+			console.log("Showing student id modal");
+			
+			var m_request_body = JSON.stringify({type: "device_id", device: "DEV_ID"});
+			
+			console.log(m_request_body);
+			
+			$.ajax({
+				url: "FLUD_BASE/materials.php",
+				type:"POST",
+				dataType: "json",
+				contentType: "application/json; charset=UTF-8",
+				data: m_request_body,
+				success: function(data)
+				{
+					console.log("Got response from materials.php");
+					console.log(data);
+					
+					var f_selector = document.getElementById("sel_filament");
+					
+					f_selector.options.length = 0;
+					
+					for ( var i = 0; i < data.length; i++) {
+						var f_item = data[i], id = f_item.m_id, desc = "($" +f_item.price + "/" + f_item.unit + ") - " + f_item.m_name;
+						var option = document.createElement("option");
+						option.value = id;
+						option.textContent = desc;
+						f_selector.appendChild(option);
+					};
+					
+				}
+			});
+			
+			$.ajax({
+				url: "FLUD_BASE/purpose.php",
+				dataType: 'json',
+				type: "GET",
+				success: function(data)
+				{
+					console.log("Got response from purpose.php");
+					console.log(data);
+					
+					var p_selector = document.getElementById("sel_purpose");
+					
+					p_selector.options.length = 0;
+					
+					for ( var i = 0; i < data.length; i++) {
+						var p_item = data[i], p_id = p_item.purp_id, p_desc = p_item.purpose
+						var option = document.createElement("option");
+						option.value = p_id;
+						option.textContent = p_desc;
+						p_selector.appendChild(option);
+					};
+				}
+			});
+			
+			console.log("sent AJAX requests for purpose and materials");
+			
+			$("#studentIdModal").on('shown', function() {
+				$("#studentId").val('');
+				$("#studentId").focus();
+				$("#studentIdVerification").attr("disabled", "disabled");
+			});
+			
+			$("#studentIdVerification").unbind("click").on("click", function()
+			{
+				var trans_response = "";
+				
+				if ( $("#studentId").val().length != 10) {
+					return false;
+				}
+				
+				$.ajax({
+					type:"GET",
+					contentType: "application/json; charset=UTF-8",
+					url: API_BASEURL + "files/local/" + self.filename(),
+					headers: { 'X-Api-Key': 'UTALab16' },
+					success:function (api_file_data){
+						var postBody = {type: "print", device_id: "DEV_ID"};
+						
+						postBody.uta_id = $("#studentId").val()
+						postBody.m_id = document.getElementById("sel_filament").options[document.getElementById("sel_filament").selectedIndex].value;
+						postBody.p_id = document.getElementById("sel_purpose").options[document.getElementById("sel_purpose").selectedIndex].value;
+						
+						postBody.filename = self.filename();
+						
+						postBody.est_filament_used = api_file_data.est_flmnt_vol;
+						
+						postBody.est_build_time = api_file_data.est_build_time;
+						
+						console.log(JSON.stringify(postBody));
+						
+						$.ajax({
+							type:"POST",
+							dataType: "json",
+							contentType: "application/json; charset=UTF-8",
+							url:"FLUD_BASE/flud.php",
+							data:JSON.stringify(postBody),
+							success: function(success_data){
+								console.log("got success back");
+								console.log(success_data);
+								trans_response = success_data;
+								console.log("Transaction ID is:");
+								console.log(trans_response["trans_id"]);
+								
+								$("#studentIdModal").modal('hide');
+								
+								if(trans_response.hasOwnProperty('ERROR')){
+									alert(trans_response["ERROR"]);
+								}
+								
+								if(trans_response.hasOwnProperty('authorized')){
+									if (trans_response["authorized"] === "Y"){
+										
+										console.log("User Authorized");
+										
+										var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
+										$.ajax({
+											type:"POST",
+											dataType: "json",
+											contentType: "application/json; charset=UTF-8",
+											url: API_BASEURL + "files/local/" + self.filename(),
+											data:tranBody,
+											success: function(response){console.log("Successfully saved trasaction ID data");
+																		console.log(response);}
+										});
+										
+										console.log(self.filename());
+										
+										if (self.isPaused()) {
+											$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
+											$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
+											$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
+											$("#confirmation_dialog").modal("show");
+										} else {
+											self._jobCommand("start");
+										}
+										
+									}
+									else {
+										alert("User Not Authorized!");
+										return false;
+									}
+								}
+								
+							},
+							error: function(errMsg){
+								$("#studentIdModal").modal('hide');
+								console.log("Connection to flud.php errored out. Error details:");
+								console.log(errMsg);
+								alert("Timeout error. Please inform current supervisor.");
+								}
+						});
+					}
+				});
+			});
+			
+			
 
         };
 

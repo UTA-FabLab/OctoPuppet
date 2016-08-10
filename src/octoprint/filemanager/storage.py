@@ -10,6 +10,8 @@ import logging
 import os
 import pylru
 import tempfile
+import re
+import math
 
 import octoprint.filemanager
 
@@ -435,6 +437,17 @@ class LocalFileStorage(StorageInterface):
 		if os.path.exists(file_path) and not allow_overwrite:
 			raise RuntimeError("{name} does already exist in {path} and overwriting is prohibited".format(**locals()))
 
+		# search file for kisslicer analysis lines
+		try:
+			for line in file_object.stream():
+				if 'Estimated Build Time:' in line:
+					build_time = line
+				if 'Ext 1' in line:
+					build_mat_used = line
+		except Exception as e:
+			build_time = "errored during build time search"
+			raise e
+
 		# make sure folders exist
 		if not os.path.exists(path):
 			os.makedirs(path)
@@ -450,6 +463,44 @@ class LocalFileStorage(StorageInterface):
 				hash=file_hash
 			)
 			metadata[name] = file_metadata
+			
+			# if kisslicer build time estimate was found, convert to a mysql time compatible unit and store
+			if build_time:
+				re1='.*?'	# Non-greedy match on filler
+				re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+
+				rg = re.compile(re1+re2,re.IGNORECASE|re.DOTALL)
+				m = rg.search(build_time)
+				if m:
+					float1=m.group(1)
+					build_time_float = float(float1)
+					h, m = divmod(build_time_float, 60)
+					s = math.ceil((build_time_float-int(build_time_float))*60)
+					build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2) 
+					metadata[name]["est_build_time"] = build_time_str
+			else:
+				pass
+				#metadata[name]["est_build_time"] = "No build time found in gcode"
+				
+				
+			# if kisslicer materials used estimates were found, capture and store
+			if build_mat_used:
+				re1='.*?'	# Non-greedy match on filler
+				re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+				re3='.*?'	# Non-greedy match on filler
+				re4='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 2
+
+				rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
+				m = rg.search(build_mat_used)
+				if m:
+					float1=m.group(1)
+					float2=m.group(2)
+					metadata[name]["est_flmnt_vol"] = float2
+					metadata[name]["est_flmnt_len"] = float1
+			else:
+				pass
+				#metadata[name]["est_flmnt_vol"] = "No materials used data found in gcode"
+			
 			self._save_metadata(path, metadata)
 
 		# process any links that were also provided for adding to the file

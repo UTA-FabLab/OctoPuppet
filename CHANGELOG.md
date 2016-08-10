@@ -1,5 +1,63 @@
 # OctoPrint Changelog
 
+## 1.2.13 (2016-06-16)
+
+### Bug Fixes
+
+  * [#1373](https://github.com/foosel/OctoPrint/issues/1373): Don't parse `B:` as bed temperature when it shows up as part of a position report from `M114`.
+  * [#1374](https://github.com/foosel/OctoPrint/issues/1374): Don't try to perform a passive login when the components we'd need to inform about a change in login state aren't yet available. Solves a bug that lead - among other things - to the Plugin Manager and the Software Update Plugin not showing anything but misleading errors until the user logged out and back in.
+  * Fixed the temperature graph looking staying uninitialized until a connection to a printer was established.
+
+([Commits](https://github.com/foosel/OctoPrint/compare/1.2.12...1.2.13))
+
+## 1.2.12 (2016-06-09)
+
+### Improvements
+
+  * [#1338](https://github.com/foosel/OctoPrint/issues/1338): Threshold configuration fields now include information about how to specify the thresholds.
+  * Mark unrendered timelapses currently being processed (recording or rendering) in the list and remove action buttons so no accidental double-processing can take place.
+  * Removed file extension from "rendering" and "rendered" notifications, was misleading when using the [mp4 wrapper script](https://github.com/guysoft/OctoPi/issues/184).
+  * Added some new events for manipulation of slicing profiles.
+  * Small fix of the german translation.
+
+### Bug Fixes
+
+  * [#1314](https://github.com/foosel/OctoPrint/issues/1314): Do not change the extension of `.g` files being uploaded to SD (e.g. `auto0.g`)
+  * [#1320](https://github.com/foosel/OctoPrint/issues/1320): Allow deletion of *.mp4 timelapse files (see [this wrapper script](https://github.com/guysoft/OctoPi/issues/184)).
+  * [#1324](https://github.com/foosel/OctoPrint/issues/1324): Make daemonized OctoPrint properly clean up its pid file again (see also [#1330](https://github.com/foosel/OctoPrint/pull/1330)).
+  * [#1326](https://github.com/foosel/OctoPrint/issues/1326): Do not try to clean up an unrendered timelapse while it is already being deleted (and produce way too much logging output in the process).
+  * [#1343](https://github.com/foosel/OctoPrint/issues/1343): Events are now processed in the order they are fired in, making e.g. the "timelapse rendering" message always appear before "timelapse failed" and hence not stay on forever in case of a failed timelapse.
+  * [#1344](https://github.com/foosel/OctoPrint/issues/1344): `ProgressPlugin`s now get also notified about a progress of 0%.
+  * [#1357](https://github.com/foosel/OctoPrint/issues/1357): Fixed wrongly named method call on editing access control options for a user, causing that to not work properly.
+  * [#1361](https://github.com/foosel/OctoPrint/issues/1361): Properly reload profile list for currently selected slicer in the slicing dialog on change of profiles.
+  * [#1364](https://github.com/foosel/OctoPrint/issues/1364): Fixed a race condition that could cause the UI to not initialize correctly due to 401 errors, leaving it in an unusable state until a reload.
+  * Fixed concurrent message pushing to the frontend being able to break push messages for the session by forcing synchronization of SockJS message sending.
+  * Do not require admin rights for connecting/disconnecting, like it was in 1.1.x (note that this is supposed to become configurable behaviour once [#1110](https://github.com/foosel/OctoPrint/issues/1110) gets implemented)
+
+([Commits](https://github.com/foosel/OctoPrint/compare/1.2.11...1.2.12))
+
+## 1.2.11 (2016-05-04)
+
+### Important Announcement
+
+Due to a recent change in the financial situation of the project, the funding of OctoPrint is at stake. If you love OctoPrint and want to see its development continue at the pace of the past two years, please read on about its current funding situation and how you can help: ["I need your support"](http://octoprint.org/blog/2016/04/13/i-need-your-support/).
+
+### Improvements
+
+  * Added option to treat resend requests as `ok` for such firmwares that do not send an `ok` after requesting a resend. If you printer communication gets stalled after a resend request from the firmware, try checking this option.
+  * Added an "About" dialog to properly inform about OctoPrint's license, contributors and supporters.
+  * Added a announcement plugin that utilizes the RSS feeds of the [OctoPrint Blog](http://octoprint.org/blog/) and the [plugin repository](http://plugins.octoprint.org) to display news to the user. By default only the "important announcement" category is enabled. This category will only be used for very rare situations such as making you aware of critical updates or important news. You can enable further categories (with more announcements to be expected) in the plugin's settings dialog.
+
+### Bug Fixes
+
+  * [#1300](https://github.com/foosel/OctoPrint/issues/1300) - Removed possibility to accidentally disabling local file list by first limiting view to files from SD and then disabling SD support.
+  * [#1315](https://github.com/foosel/OctoPrint/issues/1315) - Fixed broken post roll on z-based timelapses.
+  * Fixed CSS data binding syntax on the download link in the files list
+  * Changed control distance from jQuery data into a knockout observerable and observerableArray
+  * Allow an unauthorized user to logout from a logedin interface state
+
+([Commits](https://github.com/foosel/OctoPrint/compare/1.2.10...1.2.11))
+
 ## 1.2.10 (2016-03-16)
 
 ### Improvements

@@ -56,12 +56,12 @@ $(function() {
             // register for browser visibility tracking
 
             var prop = getHiddenProp();
-            if (!prop) return undefined;
+            if (prop) {
+                var eventName = prop.replace(/[H|h]idden/, "") + "visibilitychange";
+                document.addEventListener(eventName, updateBrowserVisibility);
 
-            var eventName = prop.replace(/[H|h]idden/, "") + "visibilitychange";
-            document.addEventListener(eventName, updateBrowserVisibility);
-
-            updateBrowserVisibility();
+                updateBrowserVisibility();
+            }
 
             // exports
 
@@ -275,8 +275,6 @@ $(function() {
             pass++;
         }
         log.info("... dependency resolution done");
-
-        var dataUpdater = new DataUpdater(allViewModels);
 
         //~~ Custom knockout.js bindings
 
@@ -517,14 +515,6 @@ $(function() {
         // reload overlay
         $("#reloadui_overlay_reload").click(function() { location.reload(); });
 
-        //~~ Starting up the app
-
-        _.each(allViewModels, function(viewModel) {
-            if (viewModel.hasOwnProperty("onStartup")) {
-                viewModel.onStartup();
-            }
-        });
-
         //~~ view model binding
 
         var bindViewModels = function() {
@@ -614,12 +604,31 @@ $(function() {
                     }
                 });
             });
+
+            log.info("Application startup complete");
         };
 
         if (!_.has(viewModelMap, "settingsViewModel")) {
             throw new Error("settingsViewModel is missing, can't run UI")
         }
-        viewModelMap["settingsViewModel"].requestData(bindViewModels);
+
+        var dataUpdaterConnectCallback = function() {
+            log.info("Finalizing application startup");
+
+            //~~ Starting up the app
+
+            _.each(allViewModels, function(viewModel) {
+                if (viewModel.hasOwnProperty("onStartup")) {
+                    viewModel.onStartup();
+                }
+            });
+
+            viewModelMap["settingsViewModel"].requestData(bindViewModels);
+        };
+
+        log.info("Initial application setup done, connecting to server...");
+        var dataUpdater = new DataUpdater(allViewModels);
+        dataUpdater.connect(dataUpdaterConnectCallback);
     }
 );
 

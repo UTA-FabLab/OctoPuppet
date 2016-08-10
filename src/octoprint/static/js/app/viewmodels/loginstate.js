@@ -104,6 +104,11 @@ $(function() {
                 success: function(response) {
                     new PNotify({title: gettext("Logout successful"), text: gettext("You are now logged out"), type: "success"});
                     self.fromResponse(response);
+                },
+                error: function(error) {
+                    if (error && error.status === 401) {
+                         self.fromResponse(false);
+                    }
                 }
             })
         };
@@ -124,11 +129,8 @@ $(function() {
             self.allViewModels = allViewModels;
         };
 
-        self.onDataUpdaterReconnect = function() {
-            self.requestData();
-        };
-
-        self.onStartupComplete = function() {
+        self.onStartupComplete = self.onServerConnect = self.onServerReconnect = function() {
+            if (self.allViewModels == undefined) return;
             self.requestData();
         };
     }

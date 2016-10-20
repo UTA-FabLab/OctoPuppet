@@ -216,7 +216,7 @@ $(function() {
 			console.log(m_request_body);
 			
 			$.ajax({
-				url: "FLUD_BASE/materials.php",
+				url: "FLUD_BASE/fablab/materials.php",
 				type:"POST",
 				dataType: "json",
 				contentType: "application/json; charset=UTF-8",
@@ -242,7 +242,7 @@ $(function() {
 			});
 			
 			$.ajax({
-				url: "FLUD_BASE/purpose.php",
+				url: "FLUD_BASE/fablab/purpose.php",
 				dataType: 'json',
 				type: "GET",
 				success: function(data)
@@ -304,7 +304,7 @@ $(function() {
 							type:"POST",
 							dataType: "json",
 							contentType: "application/json; charset=UTF-8",
-							url:"FLUD_BASE/flud.php",
+							url:"FLUD_BASE/fablab/flud.php",
 							data:JSON.stringify(postBody),
 							success: function(success_data){
 								console.log("got success back");

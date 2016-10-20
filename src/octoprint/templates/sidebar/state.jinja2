@@ -50,7 +50,7 @@ function forcecard() {
         startdatetime = new Date();
     }
 	// time at tenth character
-    else if (document.getElementById('studentId').value.length == 10) {
+    else if (document.getElementById('studentId').value.length == 8) {
         enddatetime = new Date();
         var difference_ms = enddatetime - startdatetime;
     }
@@ -85,6 +85,7 @@ function check_id_valid(){
       <div class="modal-body">
         <p>To ensure that the UTA FabLab is an ethical learning environment, only upload files that meet the guidelines set by the UTA Fablab and the UTA Libraries. The UTA Libraries reserve the right to refuse/destroy any fabrication requests which do not meet our guidelines. Please visit http://fablab.uta.edu/policy for more information.</p>
 		<p>By swiping your Mav Express Card and pressing the "Agree" button, you agree to the guidelines set by the UTA FabLab.</p>
+		<p><h4>Important: Make sure that the filament is loaded and heaters are online before pressing the "Agree" button.</h4></p>
 		<input type="text" id="studentId" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
 		<p>Select Filament:
 			<select id="sel_filament">

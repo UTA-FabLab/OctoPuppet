@@ -236,6 +236,16 @@ class MachineCom(object):
 			except:
 				pass
 
+		self._consecutive_timeouts = 0
+		self._consecutive_timeout_maximums = dict()
+		for key, value in settings().get(["serial", "maxCommunicationTimeouts"], merged=True, asdict=True).items():
+			try:
+				self._consecutive_timeout_maximums[key] = int(value)
+			except:
+				pass
+
+		self._max_write_passes = settings().getInt(["serial", "maxWritePasses"])
+
 		self._hello_command = settings().get(["serial", "helloCommand"])
 		self._trigger_ok_for_m29 = settings().getBoolean(["serial", "triggerOkForM29"])
 
@@ -322,6 +332,10 @@ class MachineCom(object):
 	def __del__(self):
 		self.close()
 
+	@property
+	def _active(self):
+		return self._monitoring_active and self._send_queue_active
+
 	##~~ internal state management
 
 	def _changeState(self, newState):
@@ -386,11 +400,11 @@ class MachineCom(object):
 		if self._state == self.STATE_PAUSED:
 			return "Paused"
 		if self._state == self.STATE_CLOSED:
-			return "Closed"
+			return "Offline"
 		if self._state == self.STATE_ERROR:
 			return "Error: %s" % (self.getErrorString())
 		if self._state == self.STATE_CLOSED_WITH_ERROR:
-			return "Error: %s" % (self.getErrorString())
+			return "Offline: %s" % (self.getErrorString())
 		if self._state == self.STATE_TRANSFERING_FILE:
 			return "Transfering file to SD"
 		return "?%d?" % (self._state)
@@ -566,15 +580,17 @@ class MachineCom(object):
 		if not processed:
 			cmd = process_gcode_line(cmd)
 			if not cmd:
-				return
+				return False
 
 		if self.isPrinting() and not self.isSdFileSelected():
 			try:
 				self._command_queue.put((cmd, cmd_type), item_type=cmd_type)
+				return True
 			except TypeAlreadyInQueue as e:
 				self._logger.debug("Type already in command queue: " + e.type)
+				return False
 		elif self.isOperational() or force:
-			self._sendCommand(cmd, cmd_type=cmd_type)
+			return self._sendCommand(cmd, cmd_type=cmd_type)
 
 	def sendGcodeScript(self, scriptName, replacements=None):
 		context = dict()
@@ -921,6 +937,8 @@ class MachineCom(object):
 
 		disable_external_heatup_detection = not settings().getBoolean(["feature", "externalHeatupDetection"])
 
+		self._consecutive_timeouts = 0
+
 		#Open the serial port.
 		if not self._openSerial():
 			return
@@ -956,6 +974,7 @@ class MachineCom(object):
 				if line is None:
 					break
 				if line.strip() is not "":
+					self._consecutive_timeouts = 0
 					self._timeout = get_new_timeout("communication", self._timeout_intervals)
 
 				##~~ debugging output handling
@@ -1120,12 +1139,16 @@ class MachineCom(object):
 				elif 'File opened' in line and not self._ignore_select:
 					# answer to M23, at least on Marlin, Repetier and Sprinter: "File opened:%s Size:%d"
 					match = regex_sdFileOpened.search(line)
+					if match:
+						name = match.group("name")
+						size = int(match.group("size"))
+					else:
+						name = "Unknown"
+						size = 0
 					if self._sdFileToSelect:
 						name = self._sdFileToSelect
 						self._sdFileToSelect = None
-					else:
-						name = match.group("name")
-					self._currentFile = PrintingSdFileInformation(name, int(match.group("size")))
+					self._currentFile = PrintingSdFileInformation(name, size)
 				elif 'File selected' in line:
 					if self._ignore_select:
 						self._ignore_select = False
@@ -1165,13 +1188,7 @@ class MachineCom(object):
 					self._handle_ok()
 
 				##~~ Message handling
-				elif line != '' \
-						and not line.startswith("ok") \
-						and not line.startswith("wait") \
-						and not line.startswith('Resend:') \
-						and line != 'echo:Unknown command:""\n' \
-						and self.isOperational():
-					self._callback.on_comm_message(line)
+				self._callback.on_comm_message(line)
 
 				##~~ Parsing for feedback commands
 				if feedback_controls and feedback_matcher and not "_all" in feedback_errors:
@@ -1232,6 +1249,7 @@ class MachineCom(object):
 					elif line.startswith("ok"):
 						self._onConnected()
 					elif time.time() > self._timeout:
+						self._log("There was a timeout while trying to connect to the printer")
 						self.close()
 
 			except:
@@ -1240,8 +1258,8 @@ class MachineCom(object):
 				errorMsg = "See octoprint.log for details"
 				self._log(errorMsg)
 				self._errorValue = errorMsg
-				self._changeState(self.STATE_ERROR)
 				eventManager().fire(Events.ERROR, {"error": self.getErrorString()})
+				self.close(is_error=True)
 		self._log("Connection closed, closing down monitor")
 
 	def _handle_ok(self):
@@ -1255,10 +1273,7 @@ class MachineCom(object):
 			self._currentTool = self._formerTool
 			self._formerTool = None
 
-		if self._heatupWaitStartTime:
-			self._heatupWaitTimeLost = self._heatupWaitTimeLost + (time.time() - self._heatupWaitStartTime)
-			self._heatupWaitStartTime = None
-			self._heating = False
+		self._finish_heatup()
 
 		if not self._state in (self.STATE_PRINTING, self.STATE_OPERATIONAL, self.STATE_PAUSED):
 			return
@@ -1274,32 +1289,93 @@ class MachineCom(object):
 		return
 
 	def _handle_timeout(self):
-		if self._state not in (self.STATE_PRINTING,):
-			return
-
-		if self._long_running_command:
-			self._logger.debug("Ran into a communication timeout, but a command known to be a long runner is currently active")
+		if self._state not in (self.STATE_PRINTING,
+		                       self.STATE_PAUSED,
+		                       self.STATE_OPERATIONAL):
 			return
 
 		general_message = "Configure long running commands or increase communication timeout if that happens regularly on specific commands or long moves."
-		if self._resendActive:
-			self._log("Communication timeout while printing and during an active resend, resending same line again to trigger response from printer. " + general_message)
-			self._resendSameCommand()
-			self._clear_to_send.set()
 
+		# figure out which consecutive timeout maximum we have to use
+		if self._long_running_command:
+			consecutive_max = self._consecutive_timeout_maximums.get("long", 0)
+		elif self._state in (self.STATE_PRINTING,):
+			consecutive_max = self._consecutive_timeout_maximums.get("printing", 0)
 		else:
-			self._log("Communication timeout while printing, trying to trigger response from printer. " + general_message)
-			self._sendCommand("M105", cmd_type="temperature")
+			consecutive_max = self._consecutive_timeout_maximums.get("idle", 0)
+
+		# now increment the timeout counter
+		self._consecutive_timeouts += 1
+		self._logger.debug("Now at {} consecutive timeouts".format(self._consecutive_timeouts))
+
+		if 0 < consecutive_max < self._consecutive_timeouts:
+			# too many consecutive timeouts, we give up
+			message = "No response from printer after {} consecutive communication timeouts, considering it dead.".format(consecutive_max + 1)
+			self._logger.info(message)
+			self._log(message + " " + general_message)
+			self._errorValue = "Too many consecutive timeouts, printer still connected and alive?"
+			eventManager().fire(Events.ERROR, {"error": self._errorValue})
+			self.close(is_error=True)
+
+		elif self._resendActive:
+			# resend active, resend same command instead of triggering a new one
+			message = "Communication timeout during an active resend, resending same line again to trigger response from printer."
+			self._logger.info(message)
+			self._log(message + " " + general_message)
+			if self._resendSameCommand():
+				self._clear_to_send.set()
+
+		elif self._heating:
+			# blocking heatup active, consider that finished
+			message = "Timeout while in an active heatup, considering heatup to be over."
+			self._logger.info(message)
+			self._finish_heatup()
+
+		elif self._long_running_command:
+			# long running command active, ignore timeout
+			self._logger.debug("Ran into a communication timeout, but a command known to be a long runner is currently active")
+
+		elif self._state in (self.STATE_PRINTING, self.STATE_PAUSED):
+			# printing, try to tickle the printer
+			message = "Communication timeout while printing, trying to trigger response from printer."
+			self._logger.info(message)
+			self._log(message + " " + general_message)
+			if self._sendCommand("M105", cmd_type="temperature"):
+				self._clear_to_send.set()
+
+		elif self._clear_to_send.blocked():
+			# timeout while idle and no oks left, let's try to tickle the printer
+			message = "Communication timeout while idle, trying to trigger response from printer."
+			self._logger.info(message)
+			self._log(message + " " + general_message)
 			self._clear_to_send.set()
 
-		return
+	def _finish_heatup(self):
+		if self._heatupWaitStartTime:
+			self._heatupWaitTimeLost = self._heatupWaitTimeLost + (time.time() - self._heatupWaitStartTime)
+			self._heatupWaitStartTime = None
+			self._heating = False
 
 	def _continue_sending(self):
-		if self._state == self.STATE_PRINTING:
-			if not self._sendFromQueue() and not self.isSdPrinting():
-				self._sendNext()
-		elif self._state == self.STATE_OPERATIONAL or self._state == self.STATE_PAUSED:
-			self._sendFromQueue()
+		while self._active:
+
+			if self._state == self.STATE_OPERATIONAL or self._state == self.STATE_PAUSED or self.isSdPrinting():
+				# just send stuff from the command queue and be done with it
+				return self._sendFromQueue()
+
+			elif self._state == self.STATE_PRINTING:
+				# we are printing, we really want to send either something from the command
+				# queue or the next line from our file, so we only return here if we actually DO
+				# send something
+				if self._sendFromQueue():
+					# we found something in the queue to send
+					return True
+
+				elif self._sendNext():
+					# we sent the next line from the file
+					return True
+
+				self._logger.debug("No command sent on ok while printing, doing another iteration")
 
 	def _process_registered_message(self, line, feedback_matcher, feedback_controls, feedback_errors):
 		feedback_match = feedback_matcher.search(line)
@@ -1594,10 +1670,24 @@ class MachineCom(object):
 
 	def _sendNext(self):
 		with self._sendNextLock:
-			line = self._getNext()
-			if line is not None:
-				self._sendCommand(line)
+			while self._active:
+				# we loop until we've actually enqueued a line for sending
+				if self._state != self.STATE_PRINTING:
+					# we are no longer printing, return false
+					return False
+
+				line = self._getNext()
+				if line is None:
+					# end of file, return false
+					return False
+
+				result = self._sendCommand(line)
 				self._callback.on_comm_progress()
+				if result:
+					# line sent, return true
+					return True
+
+				self._logger.debug("Command \"{}\" from file not enqueued, doing another iteration".format(line))
 
 	def _handleResendRequest(self, line):
 		try:
@@ -1685,7 +1775,7 @@ class MachineCom(object):
 				self._handle_ok()
 
 	def _resendSameCommand(self):
-		self._resendNextCommand(again=True)
+		return self._resendNextCommand(again=True)
 
 	def _resendNextCommand(self, again=False):
 		self._lastCommError = None
@@ -1706,13 +1796,15 @@ class MachineCom(object):
 			cmd = self._lastLines[-self._resendDelta]
 			lineNumber = self._currentLine - self._resendDelta
 
-			self._enqueue_for_sending(cmd, linenumber=lineNumber)
+			result = self._enqueue_for_sending(cmd, linenumber=lineNumber)
 
 			self._resendDelta -= 1
 			if self._resendDelta <= 0:
 				self._resendDelta = None
 				self._lastResendNumber = None
 				self._currentResendCount = 0
+
+			return result
 
 	def _sendCommand(self, cmd, cmd_type=None):
 		# Make sure we are only handling one sending job at a time
@@ -1734,11 +1826,11 @@ class MachineCom(object):
 				eventManager().fire(gcodeToEvent[gcode])
 
 			# actually enqueue the command for sending
-			self._enqueue_for_sending(cmd, command_type=cmd_type)
-
-			self._process_command_phase("queued", cmd, cmd_type, gcode=gcode)
-
-			return True
+			if self._enqueue_for_sending(cmd, command_type=cmd_type):
+				self._process_command_phase("queued", cmd, cmd_type, gcode=gcode)
+				return True
+			else:
+				return False
 
 	##~~ send loop handling
 
@@ -1754,8 +1846,10 @@ class MachineCom(object):
 
 		try:
 			self._send_queue.put((command, linenumber, command_type), item_type=command_type)
+			return True
 		except TypeAlreadyInQueue as e:
 			self._logger.debug("Type already in send queue: " + e.type)
+			return False
 
 	def _send_loop(self):
 		"""
@@ -1929,24 +2023,56 @@ class MachineCom(object):
 			return
 
 		self._log("Send: " + str(cmd))
-		try:
-			self._serial.write(cmd + '\n')
-		except serial.SerialTimeoutException:
-			self._log("Serial timeout while writing to serial port, trying again.")
+
+		cmd += "\n"
+		written = 0
+		passes = 0
+		while written < len(cmd):
+			to_send = cmd[written:]
+			old_written = written
+
 			try:
-				self._serial.write(cmd + '\n')
+				result = self._serial.write(to_send)
+				if result is None or not isinstance(result, int):
+					# probably some plugin not returning the written bytes, assuming all of them
+					written += len(cmd)
+				else:
+					written += result
+			except serial.SerialTimeoutException:
+				self._log("Serial timeout while writing to serial port, trying again.")
+				try:
+					result = self._serial.write(to_send)
+					if result is None or not isinstance(result, int):
+						# probably some plugin not returning the written bytes, assuming all of them
+						written += len(cmd)
+					else:
+						written += result
+				except:
+					if not self._connection_closing:
+						self._logger.exception("Unexpected error while writing to serial port")
+						self._log("Unexpected error while writing to serial port: %s" % (get_exception_string()))
+						self._errorValue = get_exception_string()
+						self.close(is_error=True)
+					break
 			except:
 				if not self._connection_closing:
 					self._logger.exception("Unexpected error while writing to serial port")
 					self._log("Unexpected error while writing to serial port: %s" % (get_exception_string()))
 					self._errorValue = get_exception_string()
 					self.close(is_error=True)
-		except:
-			if not self._connection_closing:
-				self._logger.exception("Unexpected error while writing to serial port")
-				self._log("Unexpected error while writing to serial port: %s" % (get_exception_string()))
-				self._errorValue = get_exception_string()
-				self.close(is_error=True)
+				break
+
+			if old_written == written:
+				# nothing written this pass
+				passes += 1
+				if passes > self._max_write_passes:
+					# nothing written in max consecutive passes, we give up
+					message = "Could not write anything to the serial port in {} tries, something appears to be wrong with the printer communication".format(self._max_write_passes)
+					self._logger.error(message)
+					self._log(message)
+					self._errorValue = "Could not write to serial port"
+					self.close(is_error=True)
+					break
 
 	##~~ command handlers
 

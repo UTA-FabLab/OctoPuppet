@@ -46,7 +46,7 @@ def settings(init=False, basedir=None, configfile=None):
 	        (False, default). If this is set to True and the plugin manager has already been initialized, a :class:`ValueError`
 	        will be raised. The same will happen if the plugin manager has not yet been initialized and this is set to
 	        False.
-	    basedir (str): Path of the base directoy for all of OctoPrint's settings, log files, uploads etc. If not set
+	    basedir (str): Path of the base directory for all of OctoPrint's settings, log files, uploads etc. If not set
 	        the default will be used: ``~/.octoprint`` on Linux, ``%APPDATA%/OctoPrint`` on Windows and
 	        ``~/Library/Application Support/OctoPrint`` on MacOS.
 	    configfile (str): Path of the configuration file (``config.yaml``) to work on. If not set the default will
@@ -84,6 +84,12 @@ default_settings = {
 			"temperature": 5,
 			"sdStatus": 1
 		},
+		"maxCommunicationTimeouts": {
+			"idle": 2,
+			"printing": 5,
+			"long": 5
+		},
+		"maxWritePasses": 5,
 		"additionalPorts": [],
 		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32", "M400", "M226"],
 		"checksumRequiringCommands": ["M110"],
@@ -102,12 +108,16 @@ default_settings = {
 		"firstRun": True,
 		"secretKey": None,
 		"reverseProxy": {
-			"prefixHeader": "X-Script-Name",
-			"schemeHeader": "X-Scheme",
-			"hostHeader": "X-Forwarded-Host",
-			"prefixFallback": "",
-			"schemeFallback": "",
-			"hostFallback": ""
+			"prefixHeader": None,
+			"schemeHeader": None,
+			"hostHeader": None,
+			"serverHeader": None,
+			"portHeader": None,
+			"prefixFallback": None,
+			"schemeFallback": None,
+			"hostFallback": None,
+			"serverFallback": None,
+			"portFallback": None
 		},
 		"uploads": {
 			"maxSize":  1 * 1024 * 1024 * 1024, # 1GB
@@ -162,6 +172,7 @@ default_settings = {
 		"sendChecksumWithUnknownCommands": False,
 		"unknownCommandsNeedAck": False,
 		"sdSupport": True,
+		"sdRelativePath": False,
 		"sdAlwaysAvailable": False,
 		"swallowOkAfterResend": True,
 		"repetierTargetTemp": False,
@@ -275,6 +286,15 @@ default_settings = {
 			}
 		}
 	},
+	"estimation": {
+		"printTime": {
+			"statsWeighingUntil": 0.5,
+			"validityRange": 0.15,
+			"forceDumbFromPercent": 0.3,
+			"forceDumbAfterMin": 30,
+			"stableThreshold": 60
+		}
+	},
 	"devel": {
 		"stylesheet": "css",
 		"cache": {
@@ -293,6 +313,7 @@ default_settings = {
 			"okWithLinenumber": False,
 			"numExtruders": 1,
 			"includeCurrentToolInTemps": True,
+			"includeFilenameInOpened": True,
 			"movementSpeed": {
 				"x": 6000,
 				"y": 6000,
@@ -857,9 +878,9 @@ class Settings(object):
 
 		while len(path) > 1:
 			key = path.pop(0)
-			if key in config and key in defaults:
+			if key in config:
 				config = config[key]
-				defaults = defaults[key]
+				defaults = defaults.get(key, dict())
 			elif incl_defaults and key in defaults:
 				config = {}
 				defaults = defaults[key]

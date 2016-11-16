@@ -666,6 +666,7 @@ class Settings(object):
 			printer_parameters = self._config["printerParameters"]
 
 			if "movementSpeed" in printer_parameters or "invertAxes" in printer_parameters:
+				dirty = True
 				default_profile["axes"] = dict(x=dict(), y=dict(), z=dict(), e=dict())
 				if "movementSpeed" in printer_parameters:
 					for axis in ("x", "y", "z", "e"):
@@ -679,6 +680,7 @@ class Settings(object):
 					del self._config["printerParameters"]["invertedAxes"]
 
 			if "numExtruders" in printer_parameters or "extruderOffsets" in printer_parameters:
+				dirty = True
 				if not "extruder" in default_profile:
 					default_profile["extruder"] = dict()
 
@@ -694,6 +696,7 @@ class Settings(object):
 					del self._config["printerParameters"]["extruderOffsets"]
 
 			if "bedDimensions" in printer_parameters:
+				dirty = True
 				bed_dimensions = printer_parameters["bedDimensions"]
 				if not "volume" in default_profile:
 					default_profile["volume"] = dict()
@@ -709,8 +712,6 @@ class Settings(object):
 					if "y" in bed_dimensions:
 						default_profile["volume"]["depth"] = bed_dimensions["y"]
 				del self._config["printerParameters"]["bedDimensions"]
-
-			dirty = True
 
 		if dirty:
 			if not "printerProfiles" in self._config:
@@ -842,7 +843,7 @@ class Settings(object):
 
 		from octoprint.util import atomic_write
 		try:
-			with atomic_write(self._configfile, "wb", prefix="octoprint-config-", suffix=".yaml") as configFile:
+			with atomic_write(self._configfile, "wb", prefix="octoprint-config-", suffix=".yaml", permissions=0o600, max_permissions=0o666) as configFile:
 				yaml.safe_dump(self._config, configFile, default_flow_style=False, indent="    ", allow_unicode=True)
 				self._dirty = False
 		except:
@@ -1153,7 +1154,7 @@ class Settings(object):
 		path, _ = os.path.split(filename)
 		if not os.path.exists(path):
 			os.makedirs(path)
-		with atomic_write(filename, "wb") as f:
+		with atomic_write(filename, "wb", max_permissions=0o666) as f:
 			f.write(script)
 
 def _default_basedir(applicationName):

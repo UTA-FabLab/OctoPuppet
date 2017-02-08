@@ -219,6 +219,205 @@ def fix_webassets_filtertool():
 
 	FilterTool._wrap_cache = fixed_wrap_cache
 
+#~~ WSGI environment wrapper for reverse proxying
+
+class ReverseProxiedEnvironment(object):
+
+	@staticmethod
+	def to_header_candidates(values):
+		if values is None:
+			return []
+		if not isinstance(values, (list, tuple)):
+			values = [values]
+		to_wsgi_format = lambda header: "HTTP_" + header.upper().replace("-", "_")
+		return map(to_wsgi_format, values)
+
+	def __init__(self,
+	             header_prefix=None,
+	             header_scheme=None,
+	             header_host=None,
+	             header_server=None,
+	             header_port=None,
+	             prefix=None,
+	             scheme=None,
+	             host=None,
+	             server=None,
+	             port=None):
+
+		# sensible defaults
+		if header_prefix is None:
+			header_prefix = ["x-script-name"]
+		if header_scheme is None:
+			header_scheme = ["x-forwarded-proto", "x-scheme"]
+		if header_host is None:
+			header_host = ["x-forwarded-host"]
+		if header_server is None:
+			header_server = ["x-forwarded-server"]
+		if header_port is None:
+			header_port = ["x-forwarded-port"]
+
+		# header candidates
+		self._headers_prefix = self.to_header_candidates(header_prefix)
+		self._headers_scheme = self.to_header_candidates(header_scheme)
+		self._headers_host = self.to_header_candidates(header_host)
+		self._headers_server = self.to_header_candidates(header_server)
+		self._headers_port = self.to_header_candidates(header_port)
+
+		# fallback prefix & scheme & host from config
+		self._fallback_prefix = prefix
+		self._fallback_scheme = scheme
+		self._fallback_host = host
+		self._fallback_server = server
+		self._fallback_port = port
+
+	def __call__(self, environ):
+		def retrieve_header(header_type):
+			candidates = getattr(self, "_headers_" + header_type, [])
+			fallback = getattr(self, "_fallback_" + header_type, None)
+
+			for candidate in candidates:
+				value = environ.get(candidate, None)
+				if value is not None:
+					return value
+			else:
+				return fallback
+
+		def host_to_server_and_port(host, scheme):
+			if host is None:
+				return None, None
+
+			if ":" in host:
+				server, port = host.split(":", 1)
+			else:
+				server = host
+				port = "443" if scheme == "https" else "80"
+
+			return server, port
+
+		# determine prefix
+		prefix = retrieve_header("prefix")
+		if prefix is not None:
+			environ["SCRIPT_NAME"] = prefix
+			path_info = environ["PATH_INFO"]
+			if path_info.startswith(prefix):
+				environ["PATH_INFO"] = path_info[len(prefix):]
+
+		# determine scheme
+		scheme = retrieve_header("scheme")
+		if scheme is not None and "," in scheme:
+			# Scheme might be something like "https,https" if doubly-reverse-proxied
+			# without stripping original scheme header first, make sure to only use
+			# the first entry in such a case. See #1391.
+			scheme, _ = map(lambda x: x.strip(), scheme.split(",", 1))
+		if scheme is not None:
+			environ["wsgi.url_scheme"] = scheme
+
+		# determine host
+		url_scheme = environ["wsgi.url_scheme"]
+		host = retrieve_header("host")
+		if host is not None:
+			# if we have a host, we take server_name and server_port from it
+			server, port = host_to_server_and_port(host, url_scheme)
+			environ["HTTP_HOST"] = host
+			environ["SERVER_NAME"] = server
+			environ["SERVER_PORT"] = port
+
+		elif environ.get("HTTP_HOST", None) is not None:
+			# if we have a Host header, we use that and make sure our server name and port properties match it
+			host = environ["HTTP_HOST"]
+			server, port = host_to_server_and_port(host, url_scheme)
+			environ["SERVER_NAME"] = server
+			environ["SERVER_PORT"] = port
+
+		else:
+			# else we take a look at the server and port headers and if we have
+			# something there we derive the host from it
+
+			# determine server - should usually not be used
+			server = retrieve_header("server")
+			if server is not None:
+				environ["SERVER_NAME"] = server
+
+			# determine port - should usually not be used
+			port = retrieve_header("port")
+			if port is not None:
+				environ["SERVER_PORT"] = port
+
+			# reconstruct host header
+			if url_scheme == "http" and environ["SERVER_PORT"] == "80" or url_scheme == "https" and environ["SERVER_PORT"] == "443":
+				# default port for scheme, can be skipped
+				environ["HTTP_HOST"] = environ["SERVER_NAME"]
+			else:
+				environ["HTTP_HOST"] = environ["SERVER_NAME"] + ":" + environ["SERVER_PORT"]
+
+		# call wrapped app with rewritten environment
+		return environ
+
+#~~ request and response versions
+
+from werkzeug.wrappers import cached_property
+
+class OctoPrintFlaskRequest(flask.Request):
+	environment_wrapper = staticmethod(lambda x: x)
+
+	def __init__(self, environ, *args, **kwargs):
+		# apply environment wrapper to provided WSGI environment
+		flask.Request.__init__(self, self.environment_wrapper(environ), *args, **kwargs)
+
+	@cached_property
+	def cookies(self):
+		# strip cookie_suffix from all cookies in the request, return result
+		cookies = flask.Request.cookies.__get__(self)
+
+		result = dict()
+		desuffixed = dict()
+		for key, value in cookies.items():
+			if key.endswith(self.cookie_suffix):
+				desuffixed[key[:-len(self.cookie_suffix)]] = value
+			else:
+				result[key] = value
+
+		result.update(desuffixed)
+		return result
+
+	@cached_property
+	def server_name(self):
+		"""Short cut to the request's server name header"""
+		return self.environ.get("SERVER_NAME")
+
+	@cached_property
+	def server_port(self):
+		"""Short cut to the request's server port header"""
+		return self.environ.get("SERVER_PORT")
+
+	@cached_property
+	def cookie_suffix(self):
+		"""
+		Request specific suffix for set and read cookies
+
+		We need this because cookies are not port-specific and we don't want to overwrite our
+		session and other cookies from one OctoPrint instance on our machine with those of another
+		one who happens to listen on the same address albeit a different port.
+		"""
+		return "_P" + self.server_port
+
+
+class OctoPrintFlaskResponse(flask.Response):
+	def set_cookie(self, key, *args, **kwargs):
+		# restrict cookie path to script root
+		kwargs["path"] = flask.request.script_root + kwargs.get("path", "/")
+
+		# add request specific cookie suffix to name
+		flask.Response.set_cookie(self, key + flask.request.cookie_suffix, *args, **kwargs)
+
+	def delete_cookie(self, key, path='/', domain=None):
+		flask.Response.delete_cookie(self, key, path=path, domain=domain)
+
+		# we also still might have a cookie left over from before we started prefixing, delete that manually
+		# without any pre processing (no path prefix, no key suffix)
+		flask.Response.set_cookie(self, key, expires=0, max_age=0, path=path, domain=domain)
+
+
 #~~ passive login helper
 
 def passive_login():
@@ -269,7 +468,9 @@ class LessSimpleCache(BaseCache):
 
 	def __init__(self, threshold=500, default_timeout=300):
 		BaseCache.__init__(self, default_timeout=default_timeout)
+		self._mutex = threading.RLock()
 		self._cache = {}
+		self._bypassed = set()
 		self.clear = self._cache.clear
 		self._threshold = threshold
 
@@ -278,27 +479,35 @@ class LessSimpleCache(BaseCache):
 			now = time.time()
 			for idx, (key, (expires, _)) in enumerate(self._cache.items()):
 				if expires is not None and expires <= now or idx % 3 == 0:
-					self._cache.pop(key, None)
+					with self._mutex:
+						self._cache.pop(key, None)
 
 	def get(self, key):
 		import pickle
 		now = time.time()
-		expires, value = self._cache.get(key, (0, None))
+		with self._mutex:
+			expires, value = self._cache.get(key, (0, None))
 		if expires is None or expires > now:
 			return pickle.loads(value)
 
 	def set(self, key, value, timeout=None):
 		import pickle
-		self._prune()
-		self._cache[key] = (self.calculate_timeout(timeout=timeout),
-		                    pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
+
+		with self._mutex:
+			self._prune()
+			self._cache[key] = (self.calculate_timeout(timeout=timeout),
+								pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
+			if key in self._bypassed:
+				self._bypassed.remove(key)
 
 	def add(self, key, value, timeout=None):
-		self.set(key, value, timeout=None)
-		self._cache.setdefault(key, self._cache[key])
+		with self._mutex:
+			self.set(key, value, timeout=None)
+			self._cache.setdefault(key, self._cache[key])
 
 	def delete(self, key):
-		self._cache.pop(key, None)
+		with self._mutex:
+			self._cache.pop(key, None)
 
 	def calculate_timeout(self, timeout=None):
 		if timeout is None:
@@ -310,7 +519,29 @@ class LessSimpleCache(BaseCache):
 	def over_threshold(self):
 		if self._threshold is None:
 			return False
-		return len(self._cache) > self._threshold
+		with self._mutex:
+			return len(self._cache) > self._threshold
+
+	def __getitem__(self, key):
+		return self.get(key)
+
+	def __setitem__(self, key, value):
+		return self.set(key, value)
+
+	def __delitem__(self, key):
+		return self.delete(key)
+
+	def __contains__(self, key):
+		with self._mutex:
+			return key in self._cache
+
+	def set_bypassed(self, key):
+		with self._mutex:
+			self._bypassed.add(key)
+
+	def is_bypassed(self, key):
+		with self._mutex:
+			return key in self._bypassed
 
 _cache = LessSimpleCache()
 
@@ -320,17 +551,20 @@ def cached(timeout=5 * 60, key=lambda: "view:%s" % flask.request.path, unless=No
 		def decorated_function(*args, **kwargs):
 			logger = logging.getLogger(__name__)
 
+			cache_key = key()
+
 			# bypass the cache if "unless" condition is true
 			if callable(unless) and unless():
 				logger.debug("Cache for {path} bypassed, calling wrapped function".format(path=flask.request.path))
+				_cache.set_bypassed(cache_key)
 				return f(*args, **kwargs)
 
 			# also bypass the cache if it's disabled completely
 			if not settings().getBoolean(["devel", "cache", "enabled"]):
 				logger.debug("Cache for {path} disabled, calling wrapped function".format(path=flask.request.path))
+				_cache.set_bypassed(cache_key)
 				return f(*args, **kwargs)
 
-			cache_key = key()
 			rv = _cache.get(cache_key)
 
 			# only take the value from the cache if we are not required to refresh it from the wrapped function
@@ -346,7 +580,8 @@ def cached(timeout=5 * 60, key=lambda: "view:%s" % flask.request.path, unless=No
 
 			# do not store if the "unless_response" condition is true
 			if callable(unless_response) and unless_response(rv):
-				logger.debug("Not caching result for {path}, bypassed".format(path=flask.request.path))
+				logger.debug("Not caching result for {path} (key: {key}), bypassed".format(path=flask.request.path, key=cache_key))
+				_cache.set_bypassed(cache_key)
 				return rv
 
 			# store it in the cache
@@ -357,6 +592,16 @@ def cached(timeout=5 * 60, key=lambda: "view:%s" % flask.request.path, unless=No
 		return decorated_function
 
 	return decorator
+
+def is_in_cache(key=lambda: "view:%s" % flask.request.path):
+	if callable(key):
+		key = key()
+	return key in _cache
+
+def is_cache_bypassed(key=lambda: "view:%s" % flask.request.path):
+	if callable(key):
+		key = key()
+	return _cache.is_bypassed(key)
 
 def cache_check_headers():
 	return "no-cache" in flask.request.cache_control or "no-cache" in flask.request.pragma
@@ -386,9 +631,8 @@ class PreemptiveCache(object):
 
 		self._lock = threading.RLock()
 		self._logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
-		self._log_access = True
 
-	def record(self, data, unless=None):
+	def record(self, data, unless=None, root=None):
 		if callable(unless) and unless():
 			return
 
@@ -397,15 +641,28 @@ class PreemptiveCache(object):
 			entry_data = entry_data()
 
 		if entry_data is not None:
-			from flask import request
-			self.add_data(request.path, entry_data)
+			if root is None:
+				from flask import request
+				root = request.path
+			self.add_data(root, entry_data)
 
-	@contextlib.contextmanager
-	def disable_access_logging(self):
-		with self._lock:
-			self._log_access = False
-			yield
-			self._log_access = True
+	def has_record(self, data, root=None):
+		if callable(data):
+			data = data()
+
+		if data is None:
+			return False
+
+		if root is None:
+			from flask import request
+			root = request.path
+
+		all_data = self.get_data(root)
+		for existing in all_data:
+			if self._compare_data(data, existing):
+				return True
+
+		return False
 
 	def clean_all_data(self, cleanup_function):
 		assert callable(cleanup_function)
@@ -420,7 +677,7 @@ class PreemptiveCache(object):
 					self._logger.debug("Removed root {} from preemptive cache".format(root))
 				elif len(entries) < old_count:
 					all_data[root] = entries
-					self._logger.debug("Removed {} from preemptive cache for root {}".format(old_count - len(entries), root))
+					self._logger.debug("Removed {} entries from preemptive cache for root {}".format(old_count - len(entries), root))
 			self.set_all_data(all_data)
 
 		return all_data
@@ -455,7 +712,7 @@ class PreemptiveCache(object):
 
 		with self._lock:
 			try:
-				with atomic_write(self.cachefile, "wb") as handle:
+				with atomic_write(self.cachefile, "wb", max_permissions=0o666) as handle:
 					yaml.safe_dump(data, handle,default_flow_style=False, indent="    ", allow_unicode=True)
 			except:
 				self._logger.exception("Error while writing {}".format(self.cachefile))
@@ -467,20 +724,12 @@ class PreemptiveCache(object):
 			self.set_all_data(all_data)
 
 	def add_data(self, root, data):
-		from octoprint.util import dict_filter
-
-		def strip_ignored(d):
-			return dict_filter(d, lambda k, v: not k.startswith("_"))
-
-		def compare(a, b):
-			return set(strip_ignored(a).items()) == set(strip_ignored(b).items())
-
 		def split_matched_and_unmatched(entry, entries):
 			matched = []
 			unmatched = []
 
 			for e in entries:
-				if compare(e, entry):
+				if self._compare_data(e, entry):
 					matched.append(e)
 				else:
 					unmatched.append(e)
@@ -509,14 +758,20 @@ class PreemptiveCache(object):
 				to_persist["_timestamp"] = time.time()
 				to_persist["_count"] = 1
 				self._logger.info("Adding entry for {} and {!r}".format(root, to_persist))
-			elif self._log_access:
+			else:
 				to_persist["_timestamp"] = time.time()
 				to_persist["_count"] = to_persist.get("_count", 0) + 1
 				self._logger.debug("Updating timestamp and counter for {} and {!r}".format(root, data))
-			else:
-				self._logger.debug("Not updating timestamp and counter for {} and {!r}, currently flagged as disabled".format(root, data))
 
 			self.set_data(root, [to_persist] + other)
+
+	def _compare_data(self, a, b):
+		from octoprint.util import dict_filter
+
+		def strip_ignored(d):
+			return dict_filter(d, lambda k, v: not k.startswith("_"))
+
+		return set(strip_ignored(a).items()) == set(strip_ignored(b).items())
 
 
 def preemptively_cached(cache, data, unless=None):
@@ -879,12 +1134,8 @@ class SettingsCheckUpdater(webassets.updater.BaseUpdater):
 		cache_value = webassets.utils.hash_func(json.dumps(settings().effective_yaml))
 		ctx.cache.set(cache_key, cache_value)
 
-##~~ plugin assets collector
-
-def collect_plugin_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
-	logger = logging.getLogger(__name__ + ".collect_plugin_assets")
-
-	supported_stylesheets = ("css", "less")
+##~~ core assets collector
+def collect_core_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 	assets = dict(
 		js=[],
 		css=[],
@@ -923,9 +1174,24 @@ def collect_plugin_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 	elif preferred_stylesheet == "css":
 		assets["css"].append('css/octoprint.css')
 
+	return assets
+
+##~~ plugin assets collector
+
+def collect_plugin_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
+	logger = logging.getLogger(__name__ + ".collect_plugin_assets")
+
+	supported_stylesheets = ("css", "less")
+	assets = dict(bundled=dict(js=[], css=[], less=[]),
+	              external=dict(js=[], css=[], less=[]))
+
 	asset_plugins = octoprint.plugin.plugin_manager().get_implementations(octoprint.plugin.AssetPlugin)
 	for implementation in asset_plugins:
 		name = implementation._identifier
+		is_bundled = implementation._plugin_info.bundled
+
+		asset_key = "bundled" if is_bundled else "external"
+
 		try:
 			all_assets = implementation.get_assets()
 			basefolder = implementation.get_asset_folder()
@@ -943,13 +1209,13 @@ def collect_plugin_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 			for asset in all_assets["js"]:
 				if not asset_exists("js", asset):
 					continue
-				assets["js"].append('plugin/{name}/{asset}'.format(**locals()))
+				assets[asset_key]["js"].append('plugin/{name}/{asset}'.format(**locals()))
 
 		if preferred_stylesheet in all_assets:
 			for asset in all_assets[preferred_stylesheet]:
 				if not asset_exists(preferred_stylesheet, asset):
 					continue
-				assets[preferred_stylesheet].append('plugin/{name}/{asset}'.format(**locals()))
+				assets[asset_key][preferred_stylesheet].append('plugin/{name}/{asset}'.format(**locals()))
 		else:
 			for stylesheet in supported_stylesheets:
 				if not stylesheet in all_assets:
@@ -958,7 +1224,7 @@ def collect_plugin_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 				for asset in all_assets[stylesheet]:
 					if not asset_exists(stylesheet, asset):
 						continue
-					assets[stylesheet].append('plugin/{name}/{asset}'.format(**locals()))
+					assets[asset_key][stylesheet].append('plugin/{name}/{asset}'.format(**locals()))
 				break
 
 	return assets

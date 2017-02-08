@@ -58,6 +58,10 @@ $(function() {
         self.localTarget = undefined;
         self.sdTarget = undefined;
 
+        self.uploadProgressText = ko.observable();
+
+        self._uploadInProgress = false;
+
         // initialize list helper
         self.listHelper = new ItemListHelper(
             "gcodeFiles",
@@ -145,22 +149,26 @@ $(function() {
             self.isSdReady(data.flags.sdReady);
         };
 
-        self._otherRequestInProgress = false;
+        self._otherRequestInProgress = undefined;
+        self._filenameToFocus = undefined;
+        self._locationToFocus = undefined;
         self.requestData = function(filenameToFocus, locationToFocus) {
-            if (self._otherRequestInProgress) return;
+            self._filenameToFocus = self._filenameToFocus || filenameToFocus;
+            self._locationToFocus = self._locationToFocus || locationToFocus;
+            if (self._otherRequestInProgress !== undefined) {
+                return self._otherRequestInProgress
+            }
 
-            self._otherRequestInProgress = true;
-            $.ajax({
+            return self._otherRequestInProgress = $.ajax({
                 url: API_BASEURL + "files",
                 method: "GET",
-                dataType: "json",
-                success: function(response) {
-                    self.fromResponse(response, filenameToFocus, locationToFocus);
-                    self._otherRequestInProgress = false;
-                },
-                error: function() {
-                    self._otherRequestInProgress = false;
-                }
+                dataType: "json"
+            }).done(function(response) {
+                self.fromResponse(response, self._filenameToFocus, self._locationToFocus);
+            }).always(function() {
+                self._otherRequestInProgress = undefined;
+                self._filenameToFocus = undefined;
+                self._locationToFocus = undefined;
             });
         };
 
@@ -179,8 +187,19 @@ $(function() {
                 }
                 var entryElement = self.getEntryElement({name: filenameToFocus, origin: locationToFocus});
                 if (entryElement) {
+                    // scroll to uploaded element
                     var entryOffset = entryElement.offsetTop;
-                    $(".gcode_files").slimScroll({ scrollTo: entryOffset + "px" });
+                    $(".gcode_files").slimScroll({
+                        scrollTo: entryOffset + "px"
+                    });
+
+                    // highlight uploaded element
+                    var element = $(entryElement);
+                    element.on("webkitAnimationEnd oanimationend msAnimationEnd animationend", function(e) {
+                        // remove highlight class again
+                        element.removeClass("highlight");
+                    });
+                    element.addClass("highlight");
                 }
             }
 
@@ -298,7 +317,7 @@ $(function() {
         };
 
         self.enableSlicing = function(data) {
-            return self.loginState.isUser() && self.slicing.enableSlicingDialog();
+            return self.loginState.isUser() && self.slicing.enableSlicingDialog() && self.slicing.enableSlicingDialogForFile(data.name);
         };
 
         self.enableAdditionalData = function(data) {
@@ -330,12 +349,12 @@ $(function() {
                         }
                     }
                 }
-                output += gettext("Estimated Print Time") + ": " + formatDuration(data["gcodeAnalysis"]["estimatedPrintTime"]) + "<br>";
+                output += gettext("Estimated print time") + ": " + formatFuzzyPrintTime(data["gcodeAnalysis"]["estimatedPrintTime"]) + "<br>";
             }
             if (data["prints"] && data["prints"]["last"]) {
-                output += gettext("Last Printed") + ": " + formatTimeAgo(data["prints"]["last"]["date"]) + "<br>";
+                output += gettext("Last printed") + ": " + formatTimeAgo(data["prints"]["last"]["date"]) + "<br>";
                 if (data["prints"]["last"]["lastPrintTime"]) {
-                    output += gettext("Last Print Time") + ": " + formatDuration(data["prints"]["last"]["lastPrintTime"]);
+                    output += gettext("Last print time") + ": " + formatDuration(data["prints"]["last"]["lastPrintTime"]);
                 }
             }
             return output;
@@ -421,13 +440,69 @@ $(function() {
         };
 
         self.onEventUpdatedFiles = function(payload) {
-            if (payload.type == "gcode") {
-                self.requestData();
+            if (self._uploadInProgress) {
+                return;
+            }
+
+            if (payload.type !== "gcode") {
+                return;
+            }
+
+            self.requestData();
+        };
+
+        self.onEventSlicingStarted = function(payload) {
+            self.uploadProgress
+                .addClass("progress-striped")
+                .addClass("active");
+            self.uploadProgressBar.css("width", "100%");
+            if (payload.progressAvailable) {
+                self.uploadProgressText(_.sprintf(gettext("Slicing ... (%(percentage)d%%)"), {percentage: 0}));
+            } else {
+                self.uploadProgressText(gettext("Slicing ..."));
             }
         };
 
+        self.onSlicingProgress = function(slicer, modelPath, machinecodePath, progress) {
+            self.uploadProgressText(_.sprintf(gettext("Slicing ... (%(percentage)d%%)"), {percentage: Math.round(progress)}));
+        };
+
+        self.onEventSlicingCancelled = function(payload) {
+            self.uploadProgress
+                .removeClass("progress-striped")
+                .removeClass("active");
+            self.uploadProgressBar
+                .css("width", "0%");
+            self.uploadProgressText("");
+        };
+
         self.onEventSlicingDone = function(payload) {
+            self.uploadProgress
+                .removeClass("progress-striped")
+                .removeClass("active");
+            self.uploadProgressBar
+                .css("width", "0%");
+            self.uploadProgressText("");
+
+            new PNotify({
+                title: gettext("Slicing done"),
+                text: _.sprintf(gettext("Sliced %(stl)s to %(gcode)s, took %(time).2f seconds"), payload),
+                type: "success"
+            });
+
             self.requestData();
+        };
+
+        self.onEventSlicingFailed = function(payload) {
+            self.uploadProgress
+                .removeClass("progress-striped")
+                .removeClass("active");
+            self.uploadProgressBar
+                .css("width", "0%");
+            self.uploadProgressText("");
+
+            var html = _.sprintf(gettext("Could not slice %(stl)s to %(gcode)s: %(reason)s"), payload);
+            new PNotify({title: gettext("Slicing failed"), text: html, type: "error", hide: false});
         };
 
         self.onEventMetadataAnalysisFinished = function(payload) {
@@ -438,7 +513,29 @@ $(function() {
             self.requestData();
         };
 
+        self.onEventTransferStarted = function(payload) {
+            self.uploadProgress
+                .addClass("progress-striped")
+                .addClass("active");
+            self.uploadProgressBar
+                .css("width", "100%");
+            self.uploadProgressText(gettext("Streaming ..."));
+        };
+
         self.onEventTransferDone = function(payload) {
+            self.uploadProgress
+                .removeClass("progress-striped")
+                .removeClass("active");
+            self.uploadProgressBar
+                .css("width", "0");
+            self.uploadProgressText("");
+
+            new PNotify({
+                title: gettext("Streaming done"),
+                text: _.sprintf(gettext("Streamed %(local)s to %(remote)s on SD, took %(time).2f seconds"), payload),
+                type: "success"
+            });
+
             self.requestData(payload.remote, "sdcard");
         };
 
@@ -456,8 +553,10 @@ $(function() {
                 url: API_BASEURL + "files/local",
                 dataType: "json",
                 dropZone: enable ? self.localTarget : null,
+                submit: self._handleUploadStart,
                 done: self._handleUploadDone,
                 fail: self._handleUploadFail,
+                always: self._handleUploadAlways,
                 progressall: self._handleUploadProgress
             };
             self.uploadButton.fileupload(options);
@@ -468,8 +567,10 @@ $(function() {
                 url: API_BASEURL + "files/sdcard",
                 dataType: "json",
                 dropZone: enable ? self.sdTarget : null,
+                submit: self._handleUploadStart,
                 done: self._handleUploadDone,
                 fail: self._handleUploadFail,
+                always: self._handleUploadAlways,
                 progressall: self._handleUploadProgress
             };
             self.sdUploadButton.fileupload(options);
@@ -485,6 +586,11 @@ $(function() {
             }
         };
 
+        self._handleUploadStart = function(e, data) {
+            self._uploadInProgress = true;
+            return true;
+        };
+
         self._handleUploadDone = function(e, data) {
             var filename = undefined;
             var location = undefined;
@@ -495,24 +601,32 @@ $(function() {
                 filename = data.result.files.local.name;
                 location = "local";
             }
-            self.requestData(filename, location);
+            self.requestData(filename, location)
+                .done(function() {
+                    if (data.result.done) {
+                        self.uploadProgressBar
+                            .css("width", "0%");
+                        self.uploadProgressText("");
+                        self.uploadProgress
+                            .removeClass("progress-striped")
+                            .removeClass("active");
+                    }
+                });
 
             if (_.endsWith(filename.toLowerCase(), ".stl")) {
                 self.slicing.show(location, filename);
             }
-
-            if (data.result.done) {
-                self.uploadProgressBar
-                    .css("width", "0%")
-                    .text("");
-                self.uploadProgress
-                    .removeClass("progress-striped")
-                    .removeClass("active");
-            }
         };
 
         self._handleUploadFail = function(e, data) {
-            var error = "<p>" + gettext("Could not upload the file. Make sure that it is a GCODE file and has the extension \".gcode\" or \".gco\" or that it is an STL file with the extension \".stl\".") + "</p>";
+            var extensions = _.map(SUPPORTED_EXTENSIONS, function(extension) {
+                return extension.toLowerCase();
+            }).sort();
+            extensions = extensions.join(", ");
+            var error = "<p>"
+                + _.sprintf(gettext("Could not upload the file. Make sure that it is a valid file with one of these extensions: %(extensions)s"),
+                            {extensions: extensions})
+                + "</p>";
             error += pnotifyAdditionalInfo("<pre>" + data.jqXHR.responseText + "</pre>");
             new PNotify({
                 title: "Upload failed",
@@ -521,26 +635,29 @@ $(function() {
                 hide: false
             });
             self.uploadProgressBar
-                .css("width", "0%")
-                .text("");
+                .css("width", "0%");
+            self.uploadProgressText("");
             self.uploadProgress
                 .removeClass("progress-striped")
                 .removeClass("active");
+        };
+
+        self._handleUploadAlways = function(e, data) {
+            self._uploadInProgress = false;
         };
 
         self._handleUploadProgress = function(e, data) {
             var progress = parseInt(data.loaded / data.total * 100, 10);
 
             self.uploadProgressBar
-                .css("width", progress + "%")
-                .text(gettext("Uploading ..."));
+                .css("width", progress + "%");
+            self.uploadProgressText(gettext("Uploading ..."));
 
             if (progress >= 100) {
                 self.uploadProgress
                     .addClass("progress-striped")
                     .addClass("active");
-                self.uploadProgressBar
-                    .text(gettext("Saving ..."));
+                self.uploadProgressText(gettext("Saving ..."));
             }
         };
 

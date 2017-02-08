@@ -1,4 +1,6 @@
 # coding=utf-8
+from __future__ import absolute_import
+
 """
 This module bundles commonly used utility methods or helper classes that are used in multiple places withing
 OctoPrint's source code.
@@ -693,12 +695,17 @@ def address_for_client(host, port):
 
 
 @contextlib.contextmanager
-def atomic_write(filename, mode="w+b", prefix="tmp", suffix=""):
+def atomic_write(filename, mode="w+b", prefix="tmp", suffix="", permissions=0o644, max_permissions=0o777):
+	if os.path.exists(filename):
+		permissions |= os.stat(filename).st_mode
+	permissions &= max_permissions
+
 	temp_config = tempfile.NamedTemporaryFile(mode=mode, prefix=prefix, suffix=suffix, delete=False)
 	try:
 		yield temp_config
 	finally:
 		temp_config.close()
+	os.chmod(temp_config.name, permissions)
 	shutil.move(temp_config.name, filename)
 
 

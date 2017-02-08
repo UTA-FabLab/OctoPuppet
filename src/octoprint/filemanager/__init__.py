@@ -212,8 +212,8 @@ class FileManager(object):
 
 			# we'll use the default printer profile for the backlog since we don't know better
 			queue_entry = QueueEntry(entry, file_type, storage_type, path, self._printer_profile_manager.get_default())
-			self._analysis_queue.enqueue(queue_entry, high_priority=False)
-			counter += 1
+			if self._analysis_queue.enqueue(queue_entry, high_priority=False):
+				counter += 1
 		self._logger.info("Added {counter} items from storage type \"{storage_type}\" to analysis queue".format(**locals()))
 
 	def add_storage(self, storage_type, storage_manager):
@@ -284,7 +284,7 @@ class FileManager(object):
 
 		import time
 		start_time = time.time()
-		eventManager().fire(Events.SLICING_STARTED, {"stl": source_path, "gcode": dest_path, "progressAvailable": slicer.get_slicer_properties()["progress_report"] if slicer else False})
+		eventManager().fire(Events.SLICING_STARTED, {"stl": source_path, "gcode": dest_path, "progressAvailable": slicer.get_slicer_properties().get("progress_report", False) if slicer else False})
 
 		import tempfile
 		f = tempfile.NamedTemporaryFile(suffix=".gco", delete=False)
@@ -427,7 +427,7 @@ class FileManager(object):
 		            pos=pos,
 		            date=time.time())
 		try:
-			with atomic_write(self._recovery_file) as f:
+			with atomic_write(self._recovery_file, max_permissions=0o666) as f:
 				yaml.safe_dump(data, stream=f, default_flow_style=False, indent="  ", allow_unicode=True)
 		except:
 			self._logger.exception("Could not write recovery data to file {}".format(self._recovery_file))

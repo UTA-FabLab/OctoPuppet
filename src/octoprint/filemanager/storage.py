@@ -9,7 +9,6 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 import logging
 import os
 import pylru
-import tempfile
 import re
 import math
 import shutil
@@ -669,7 +668,7 @@ class LocalFileStorage(StorageInterface):
 				h, m = divmod(build_time_float, 60)
 				s = math.ceil((build_time_float-int(build_time_float))*60)
 				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2) 
-				metadata[name]["est_build_time"] = build_time_str
+				metadata["est_build_time"] = build_time_str
 		else:
 			pass
 			#metadata[name]["est_build_time"] = "No build time found in gcode"
@@ -687,8 +686,8 @@ class LocalFileStorage(StorageInterface):
 			if m:
 				float1=m.group(1)
 				float2=m.group(2)
-				metadata[name]["est_flmnt_vol"] = float2
-				metadata[name]["est_flmnt_len"] = float1
+				metadata["est_flmnt_vol"] = float2
+				metadata["est_flmnt_len"] = float1
 		else:
 			pass
 			#metadata[name]["est_flmnt_vol"] = "No materials used data found in gcode"

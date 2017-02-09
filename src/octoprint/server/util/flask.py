@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 from flask import make_response
 
 __author__ = "Gina Häußge <osd@foosel.net>"
@@ -29,6 +29,10 @@ import octoprint.plugin
 
 from werkzeug.contrib.cache import BaseCache
 
+try:
+	from os import scandir, walk
+except ImportError:
+	from scandir import scandir, walk
 
 #~~ monkey patching
 
@@ -52,12 +56,12 @@ def enable_additional_translations(default_locale="en", additional_folders=None)
 			if not os.path.isdir(dirname):
 				return []
 			result = []
-			for folder in os.listdir(dirname):
-				locale_dir = os.path.join(dirname, folder, 'LC_MESSAGES')
+			for entry in scandir(dirname):
+				locale_dir = os.path.join(entry.path, 'LC_MESSAGES')
 				if not os.path.isdir(locale_dir):
 					continue
-				if filter(lambda x: x.endswith('.mo'), os.listdir(locale_dir)):
-					result.append(Locale.parse(folder))
+				if filter(lambda x: x.name.endswith('.mo'), scandir(locale_dir)):
+					result.append(Locale.parse(entry.name))
 			if not result:
 				result.append(Locale.parse(self._default_locale))
 			return result
@@ -173,7 +177,7 @@ def fix_webassets_cache():
 			f = open(filename, 'rb')
 		except IOError as e:
 			if e.errno != errno.ENOENT:
-				raise
+				error_logger.exception("Got an exception while trying to open webasset file {}".format(filename))
 			return None
 		try:
 			result = f.read()
@@ -232,6 +236,15 @@ class ReverseProxiedEnvironment(object):
 		to_wsgi_format = lambda header: "HTTP_" + header.upper().replace("-", "_")
 		return map(to_wsgi_format, values)
 
+	@staticmethod
+	def valid_ip(address):
+		import netaddr
+		try:
+			netaddr.IPAddress(address)
+			return True
+		except:
+			return False
+
 	def __init__(self,
 	             header_prefix=None,
 	             header_scheme=None,
@@ -286,11 +299,43 @@ class ReverseProxiedEnvironment(object):
 			if host is None:
 				return None, None
 
+			default_port = "443" if scheme == "https" else "80"
+			host = host.strip()
+
 			if ":" in host:
-				server, port = host.split(":", 1)
+				# we might have an ipv6 address here, or a port, or both
+
+				if host[0] == "[":
+					# that looks like an ipv6 address with port, e.g. [fec1::1]:80
+					address_end = host.find("]")
+					if address_end == -1:
+						# no ], that looks like a seriously broken address
+						return None, None
+
+					# extract server ip, skip enclosing [ and ]
+					server = host[1:address_end]
+					tail = host[address_end + 1:]
+
+					# now check if there's also a port
+					if len(tail) and tail[0] == ":":
+						# port included as well
+						port = tail[1:]
+					else:
+						# no port, use default one
+						port = default_port
+
+				elif self.__class__.valid_ip(host):
+					# ipv6 address without port
+					server = host
+					port = default_port
+
+				else:
+					# ipv4 address with port
+					server, port = host.rsplit(":", 1)
+
 			else:
 				server = host
-				port = "443" if scheme == "https" else "80"
+				port = default_port
 
 			return server, port
 
@@ -348,7 +393,12 @@ class ReverseProxiedEnvironment(object):
 				# default port for scheme, can be skipped
 				environ["HTTP_HOST"] = environ["SERVER_NAME"]
 			else:
-				environ["HTTP_HOST"] = environ["SERVER_NAME"] + ":" + environ["SERVER_PORT"]
+				server_name_component = environ["SERVER_NAME"]
+				if ":" in server_name_component and self.__class__.valid_ip(server_name_component):
+					# this is an ipv6 address, we need to wrap that in [ and ] before appending the port
+					server_name_component = "[" + server_name_component + "]"
+
+				environ["HTTP_HOST"] = server_name_component + ":" + environ["SERVER_PORT"]
 
 		# call wrapped app with rewritten environment
 		return environ
@@ -446,6 +496,8 @@ def passive_login():
 			if netaddr.IPAddress(remoteAddr) in localNetworks:
 				user = octoprint.server.userManager.findUser(autologinAs)
 				if user is not None:
+					user = octoprint.server.userManager.login_user(user)
+					flask.session["usersession.id"] = user.get_session()
 					flask.g.user = user
 					flask.ext.login.login_user(user)
 					flask.ext.principal.identity_changed.send(flask.current_app._get_current_object(), identity=flask.ext.principal.Identity(user.get_id()))
@@ -553,30 +605,41 @@ def cached(timeout=5 * 60, key=lambda: "view:%s" % flask.request.path, unless=No
 
 			cache_key = key()
 
+			def f_with_duration(*args, **kwargs):
+				start_time = time.time()
+				try:
+					return f(*args, **kwargs)
+				finally:
+					elapsed = time.time() - start_time
+					logger.debug(
+						"Needed {elapsed:.2f}s to render {path} (key: {key})".format(elapsed=elapsed,
+						                                                             path=flask.request.path,
+						                                                             key=cache_key))
+
 			# bypass the cache if "unless" condition is true
 			if callable(unless) and unless():
 				logger.debug("Cache for {path} bypassed, calling wrapped function".format(path=flask.request.path))
 				_cache.set_bypassed(cache_key)
-				return f(*args, **kwargs)
+				return f_with_duration(*args, **kwargs)
 
 			# also bypass the cache if it's disabled completely
 			if not settings().getBoolean(["devel", "cache", "enabled"]):
 				logger.debug("Cache for {path} disabled, calling wrapped function".format(path=flask.request.path))
 				_cache.set_bypassed(cache_key)
-				return f(*args, **kwargs)
+				return f_with_duration(*args, **kwargs)
 
 			rv = _cache.get(cache_key)
 
 			# only take the value from the cache if we are not required to refresh it from the wrapped function
 			if rv is not None and (not callable(refreshif) or not refreshif(rv)):
-				logger.debug("Serving entry for {path} from cache".format(path=flask.request.path))
+				logger.debug("Serving entry for {path} from cache (key: {key})".format(path=flask.request.path, key=cache_key))
 				if not "X-From-Cache" in rv.headers:
 					rv.headers["X-From-Cache"] = "true"
 				return rv
 
 			# get value from wrapped function
 			logger.debug("No cache entry or refreshing cache for {path} (key: {key}), calling wrapped function".format(path=flask.request.path, key=cache_key))
-			rv = f(*args, **kwargs)
+			rv = f_with_duration(*args, **kwargs)
 
 			# do not store if the "unless_response" condition is true
 			if callable(unless_response) and unless_response(rv):
@@ -623,14 +686,24 @@ def cache_check_response_headers(response):
 
 	return False
 
+def cache_check_status_code(response, valid):
+	if not isinstance(response, flask.Response):
+		return False
+
+	if callable(valid):
+		return not valid(response.status_code)
+	else:
+		return response.status_code not in valid
 
 class PreemptiveCache(object):
 
 	def __init__(self, cachefile):
 		self.cachefile = cachefile
+		self.environment = None
+
+		self._logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
 
 		self._lock = threading.RLock()
-		self._logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
 
 	def record(self, data, unless=None, root=None):
 		if callable(unless) and unless():
@@ -838,15 +911,83 @@ def conditional(condition, met):
 	return decorator
 
 
+def with_revalidation_checking(etag_factory=None,
+                               lastmodified_factory=None,
+                               condition=None,
+                               unless=None):
+	if etag_factory is None:
+		def etag_factory(lm=None):
+			return None
+
+	if lastmodified_factory is None:
+		def lastmodified_factory():
+			return None
+
+	if condition is None:
+		def condition(lm=None, etag=None):
+			if lm is None:
+				lm = lastmodified_factory()
+
+			if etag is None:
+				etag = etag_factory(lm=lm)
+
+			return check_lastmodified(lm) and check_etag(etag)
+
+	if unless is None:
+		def unless():
+			return False
+
+	def decorator(f):
+		@functools.wraps(f)
+		def decorated_function(*args, **kwargs):
+			lm = lastmodified_factory()
+			etag = etag_factory(lm)
+
+			if condition(lm, etag) and not unless():
+				return make_response("Not Modified", 304)
+
+			# generate response
+			response = f(*args, **kwargs)
+
+			# set etag header if not already set
+			if etag and response.get_etag()[0] is None:
+				response.set_etag(etag)
+
+			# set last modified header if not already set
+			if lm and response.headers.get("Last-Modified", None) is None:
+				if not isinstance(lm, basestring):
+					from werkzeug.http import http_date
+					lm = http_date(lm)
+				response.headers["Last-Modified"] = lm
+
+			response = add_no_max_age_response_headers(response)
+			return response
+		return decorated_function
+	return decorator
+
+
 def check_etag(etag):
+	if etag is None:
+		return False
+
 	return flask.request.method in ("GET", "HEAD") and \
-	       flask.request.if_none_match and \
+	       flask.request.if_none_match is not None and \
 	       etag in flask.request.if_none_match
 
 
 def check_lastmodified(lastmodified):
+	if lastmodified is None:
+		return False
+
+	from datetime import datetime
+	if isinstance(lastmodified, (int, long, float, complex)):
+		lastmodified = datetime.fromtimestamp(lastmodified).replace(microsecond=0)
+
+	if not isinstance(lastmodified, datetime):
+		raise ValueError("lastmodified must be a datetime or float or int instance but, got {} instead".format(lastmodified.__class__))
+
 	return flask.request.method in ("GET", "HEAD") and \
-	       flask.request.if_modified_since and \
+	       flask.request.if_modified_since is not None and \
 	       lastmodified >= flask.request.if_modified_since
 
 
@@ -854,6 +995,11 @@ def add_non_caching_response_headers(response):
 	response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0"
 	response.headers["Pragma"] = "no-cache"
 	response.headers["Expires"] = "-1"
+	return response
+
+
+def add_no_max_age_response_headers(response):
+	response.headers["Cache-Control"] = "max-age=0"
 	return response
 
 
@@ -903,7 +1049,7 @@ def _get_flask_user_from_request(request):
 	from octoprint.settings import settings
 
 	apikey = octoprint.server.util.get_api_key(request)
-	if settings().get(["api", "enabled"]) and apikey is not None:
+	if settings().getBoolean(["api", "enabled"]) and apikey is not None:
 		user = octoprint.server.util.get_user_for_apikey(apikey)
 	else:
 		user = flask.ext.login.current_user
@@ -1142,10 +1288,19 @@ def collect_core_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 		less=[]
 	)
 	assets["js"] = [
+		'js/app/bindings/allowbindings.js',
+		'js/app/bindings/contextmenu.js',
+		'js/app/bindings/copywidth.js',
+		'js/app/bindings/invisible.js',
+		'js/app/bindings/popover.js',
+		'js/app/bindings/qrcode.js',
+		'js/app/bindings/slimscrolledforeach.js',
+		'js/app/bindings/toggle.js',
+		'js/app/bindings/togglecontent.js',
+		'js/app/bindings/valuewithinit.js',
 		'js/app/viewmodels/appearance.js',
 		'js/app/viewmodels/connection.js',
 		'js/app/viewmodels/control.js',
-		'js/app/viewmodels/firstrun.js',
 		'js/app/viewmodels/files.js',
 		'js/app/viewmodels/loginstate.js',
 		'js/app/viewmodels/navigation.js',
@@ -1153,12 +1308,14 @@ def collect_core_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 		'js/app/viewmodels/printerprofiles.js',
 		'js/app/viewmodels/settings.js',
 		'js/app/viewmodels/slicing.js',
+		'js/app/viewmodels/system.js',
 		'js/app/viewmodels/temperature.js',
 		'js/app/viewmodels/terminal.js',
 		'js/app/viewmodels/timelapse.js',
 		'js/app/viewmodels/users.js',
 		'js/app/viewmodels/log.js',
 		'js/app/viewmodels/usersettings.js',
+		'js/app/viewmodels/wizard.js',
 		'js/app/viewmodels/about.js'
 	]
 	if enable_gcodeviewer:

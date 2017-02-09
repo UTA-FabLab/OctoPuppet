@@ -12,6 +12,7 @@ or **[creating pull requests](#pull-requests)**.
     * [Where can I find which version and branch I'm on?](#where-can-i-find-which-version-and-branch-im-on)
     * [Where can I find those log files you keep talking about?](#where-can-i-find-those-log-files-you-keep-talking-about)
     * [Where can I find my browser's error console?](#where-can-i-find-my-browsers-error-console)
+  * [Setting up a development environment](#setting-up-a-development-environment)
   * [Pull requests](#pull-requests)
   * [What do the branches mean?](#what-do-the-branches-mean)
   * [How OctoPrint is versioned](#how-octoprint-is-versioned)
@@ -235,6 +236,10 @@ find information on how to do just that in the
 
 See [How to open the Javascript Console in different browsers](https://webmasters.stackexchange.com/questions/8525/how-to-open-the-javascript-console-in-different-browsers)
 
+## Setting up a development environment
+
+See [the corresponding chapter in the documentation](http://docs.octoprint.org/en/master/development/index.html#setting-up-a-development-environment).
+
 ## Pull requests
 
 1. If you want to add a new feature to OctoPrint, **please always first
@@ -277,8 +282,8 @@ See [How to open the Javascript Console in different browsers](https://webmaster
 7. **Test your changes thoroughly**. That also means testing with usage
    scenarios you don't normally use, e.g. if you only use access control, test
    without and vice versa. If you only test with your printer, test with the
-   virtual printer and vice versa. State in your pull request how your tested
-   your changes. Ideally **add unit tests** - OctoPrint severly lacks in that
+   virtual printer and vice versa. State in your pull request how you tested
+   your changes. Ideally **add unit tests** - OctoPrint severely lacks in that
    department, but we are trying to change that, so any new code already covered
    with a test suite helps a lot!
 8. In your pull request's description, **state what your pull request does**,
@@ -315,7 +320,7 @@ There are three main branches in OctoPrint:
     add a commit after release to this branch - `<x>.<y>.<z>.post<commits since x.y.z>`
     (e.g. `1.2.9.post1`).
   * `maintenance`: Improvements and fixes of the current release that make up
-    the next release go here. More or less continously updated. You can consider
+    the next release go here. More or less continuously updated. You can consider
     this a preview of the next release version. It should be very stable at all
     times. Anything you spot in here helps tremendously with getting a rock solid
     next stable release, so if you want to help out development, running the
@@ -391,6 +396,7 @@ the local version identifier to allow for an exact determination of the active c
   * 2016-09-09: New `rc/*` branches explained.
   * 2016-09-23: Some more work on "How to file a bug report" based on recent
     experiences
+  * 2017-01-25: Fixed a typo
 
 ## Footnotes
   * [1] - If you are wondering why, the problem is that anything that you add

@@ -399,7 +399,7 @@ $(function() {
 											$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
 											$("#confirmation_dialog").modal("show");
 										} else {
-											self._jobCommand("start");
+											OctoPrint.job.start();
 										}
 										
 									}

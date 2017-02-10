@@ -26,57 +26,41 @@
 </div>
 
 <script type="text/javascript">
-
-var last_key_time = new Date();
-var last_id_length = 0;
-
 function forcecard() {
-/*
-	var key_time = new Date();
-	var id_length = document.getElementById('studentId').value.length;
-	
-	if ( id_length == 1) {
-		last_key_time = key_time;
-	}
-	
-	if ((key_time - last_key_time) > 100){
-		document.getElementById('studentId').value="";
-		last_id_length = 0;
-		alert("please swipe your MavID card. Contact a FabLab employee for assistance.");
-		return false;
-	}
-	
-	if (id_length != last_id_length){
-		last_key_time = key_time;
-		last_id_length = id_length;
-	}*/
-
 	//to make sure the entry happened from swipe card we check the time for populating text
-    if (document.getElementById('studentId').value.length == 1) {
+    if (document.getElementById('studentId').value.length == 1 || document.getElementById('studentId2').value.length == 1) {
         startdatetime = new Date();
     }
 	// time at tenth character
-    else if (document.getElementById('studentId').value.length == 8) {
+    else if (document.getElementById('studentId').value.length == 8 || document.getElementById('studentId2').value.length == 8) {
         enddatetime = new Date();
         var difference_ms = enddatetime - startdatetime;
     }
     if (difference_ms > 100) {
         document.getElementById('studentId').value="";
+        document.getElementById('studentId2').value="";
 		alert("Please swipe your MavID. Contact a FabLab employee for assistance.");
         return false;
     }
-	
 }
 
 function check_id_valid(){
 	console.log("running template based ID check");
-	var modal_ok_button = document.getElementById("studentIdVerification");
-	if ( document.getElementById('studentId').value.length == 10) {
-		modal_ok_button.removeAttribute("disabled"); 
-	}
+	var modal_ok_button = document.getElementById("studentIdVerification");	
+	var modal_kill_button = document.getElementById("studentIdVerification2");	
+	
+  if (  document.getElementById('studentId2').value.length == 10 && document.getElementById('cancelIdModal').className == "modal fade in" ) {
+		modal_kill_button.removeAttribute("disabled");
+	
+  }else if( document.getElementById('studentId').value.length == 10 && document.getElementById('studentIdModal').className == "modal fade in" ){
+    modal_ok_button.removeAttribute("disabled");
+
+  }
 	else {
 		modal_ok_button.setAttribute("disabled", "disabled");
+		modal_kill_button.setAttribute("disabled", "disabled");
 	}
+  
 }
 	
 </script>
@@ -107,6 +91,27 @@ function check_id_valid(){
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" data-dismiss="modal">Disagree</button>
         <button id="studentIdVerification" type="button" class="btn btn-success" data-dismiss="modal" >Agree</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Cancel Dialog Modal -->
+
+<div hidden="true" class="modal fade" id="cancelIdModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Cancel: Swipe Mav Express Card to confirm</h4>
+      </div>
+      <div class="modal-body">
+        <p>Do you really want to kill the current job?</p>
+		<input type="text" id="studentId2" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+	  </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" data-dismiss="modal">No, Wait..!!</button>
+        <button id="studentIdVerification2" type="button" class="btn btn-danger" data-dismiss="modal" >Kill it. :(</button>
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->

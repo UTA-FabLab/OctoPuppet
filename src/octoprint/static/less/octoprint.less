@@ -76,11 +76,11 @@ body {
 
 
 .navbar-inner-color (@base, @gradientalpha: 100%, @image: false) {
-  @top: lighten(@base, 25%);
-  @bottom: darken(@base, 15%);
+  @top: lighten(@base, 0%);
+  @bottom: darken(@base, 0%);
 
-  @text-color-light: #f2f2f2;
-  @text-color-dark: #333333;
+  @text-color-light: @grayLighter;
+  @text-color-dark: @grayLighter;
   @text-color: contrast(@bottom, @text-color-dark, @text-color-light);
 
   .navbar-background-color(fade(@top, @gradientalpha), fade(@bottom, @gradientalpha), @image);
@@ -102,7 +102,7 @@ body {
 }
 
 #navbar .navbar-inner {
-  @base: #F2F2F2;
+  @base: #020202;
   .navbar-inner-color(@base);
 
   &.transparent {
@@ -110,7 +110,7 @@ body {
   }
 
   &.red {
-    @base: #bd362f;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -118,7 +118,7 @@ body {
     }
   }
   &.orange {
-    @base: #F27728;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -126,7 +126,7 @@ body {
     }
   }
   &.yellow {
-    @base: #F2DE28;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -134,7 +134,7 @@ body {
     }
   }
   &.green {
-    @base: #77FF28;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -142,7 +142,7 @@ body {
     }
   }
   &.blue {
-    @base: #04c;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -150,7 +150,7 @@ body {
     }
   }
   &.violet {
-    @base: #7728FF;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -158,7 +158,7 @@ body {
     }
   }
   &.black {
-    @base: #383838;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -166,7 +166,7 @@ body {
     }
   }
   &.white {
-    @base: #eeeeee;
+    @base: #020202;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -189,9 +189,9 @@ body {
 
   .tab-content {
     padding: 9px 15px;
-    border-left: 1px solid #DDD;
-    border-right: 1px solid #DDD;
-    border-bottom: 1px solid #DDD;
+    border-left: 1px solid #222;
+    border-right: 1px solid #222;
+    border-bottom: 1px solid #222;
 
     @radius: 4px;
     .border-bottom-right-radius(@radius);
@@ -211,7 +211,7 @@ body {
     line-height: 40px;
     color: #333;
     border: 0;
-    border-bottom: 1px solid #E5E5E5;
+    border-bottom: 1px solid #222;
     font-weight: normal;
   }
 
@@ -226,7 +226,7 @@ body {
         padding: 8px 15px;
         font-size: 14px;
         line-height: 20px;
-        color: #000;
+        color: #fff;
         text-decoration: none;
         background: none;
 
@@ -369,7 +369,7 @@ table {
 /** Temperature tab */
 
 #temperature-graph {
-  height: 350px;
+  height: 550px;
   width: 100%;
   background-image: url("../img/graph-background.png");
   background-position: center;

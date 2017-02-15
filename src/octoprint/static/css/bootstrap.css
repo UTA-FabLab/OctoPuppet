@@ -5947,7 +5947,7 @@ a.badge:focus {
 
 .accordion-group {
   margin-bottom: 2px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid #222;
   -webkit-border-radius: 4px;
      -moz-border-radius: 4px;
           border-radius: 4px;
@@ -5968,7 +5968,7 @@ a.badge:focus {
 
 .accordion-inner {
   padding: 9px 15px;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid #222;
 }
 
 .carousel {
@@ -6199,13 +6199,13 @@ html {
 body {
   min-height: 100%;
   background-color: #121417;
-  background-image: -moz-linear-gradient(top, #060606, #252a30);
-  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#060606), to(#252a30));
-  background-image: -webkit-linear-gradient(top, #060606, #252a30);
-  background-image: -o-linear-gradient(top, #060606, #252a30);
-  background-image: linear-gradient(to bottom, #060606, #252a30);
+  background-image: -moz-linear-gradient(top, #060606, #111);
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#060606), to(#111));
+  background-image: -webkit-linear-gradient(top, #060606, #111);
+  background-image: -o-linear-gradient(top, #060606, #111);
+  background-image: linear-gradient(to bottom, #060606, #111);
   background-repeat: repeat-x;
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff060606', endColorstr='#ff252a30', GradientType=0);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff060606', endColorstr='#ff111111', GradientType=0);
 }
 
 .page-header {
@@ -6951,7 +6951,7 @@ label {
 }
 
 .progress {
-  background-color: #060606;
+  background-color: #121212;
   background-image: none;
   -webkit-border-radius: 0;
      -moz-border-radius: 0;

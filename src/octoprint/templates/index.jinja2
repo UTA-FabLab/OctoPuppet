@@ -24,6 +24,11 @@
                         <div class="nav-collapse">
                             <!-- Navbar -->
                             <ul class="nav pull-right">
+                                <li>
+                                    <a id="navbar_fabapp" class="pull-right" href="https://fabapp-dev.uta.edu">
+                                        <i class="icon-globe"></i> {{ _('FabApp') }}
+                                    </a>
+                                </li>
                                 {% for key in templates.navbar.order %}
                                     {% set data = templates.navbar.entries[key] %}
                                     {% if "custom_bindings" not in data or data["custom_bindings"] %}<!-- ko allowBindings: false -->{% endif %}
@@ -36,7 +41,7 @@
                                     </li>
                                     {% if "custom_bindings" not in data or data["custom_bindings"] %}<!-- /ko -->{% endif %}
                                 {% endfor %}
-                            </ul>
+                              </ul>
                         </div>
                     </div>
                 </div>

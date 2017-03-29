@@ -77,7 +77,7 @@ $(function() {
             // print bed
             if (currentProfileData && currentProfileData.heatedBed()) {
                 self.hasBed(true);
-                heaterOptions["bed"] = {name: gettext("Bed"), color: "blue"};
+                heaterOptions["bed"] = {name: gettext("Bed"), color: "yellow"};
             } else {
                 self.hasBed(false);
             }
@@ -295,7 +295,7 @@ $(function() {
                     });
                     data.push({
                         label: gettext("Target") + " " + heaterOptions[type].name + ": " + targetTemp,
-                        color: pusher.color(heaterOptions[type].color).tint(0.5).html(),
+                        color: pusher.color(heaterOptions[type].color).alpha(0.4).html(),
                         data: targets
                     });
 

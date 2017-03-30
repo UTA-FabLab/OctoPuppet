@@ -295,7 +295,7 @@ $(function() {
                     });
                     data.push({
                         label: gettext("Target") + " " + heaterOptions[type].name + ": " + targetTemp,
-                        color: pusher.color(heaterOptions[type].color).alpha(0.4).html(),
+                        color: pusher.color(heaterOptions[type].color).shade(0.75).html(),
                         data: targets
                     });
 

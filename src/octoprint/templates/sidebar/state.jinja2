@@ -32,7 +32,7 @@ function forcecard() {
         startdatetime = new Date();
     }
 	// time at tenth character
-    else if (document.getElementById('studentId').value.length == 8 || document.getElementById('studentId2').value.length == 8) {
+    else if (document.getElementById('studentId').value.length == 11 || document.getElementById('studentId2').value.length == 11) {
         enddatetime = new Date();
         var difference_ms = enddatetime - startdatetime;
     }
@@ -114,9 +114,18 @@ function check_id_valid(){
         <h4 class="modal-title">Cancel: Swipe Mav Express Card to confirm</h4>
       </div>
       <div class="modal-body">
-        <p>Do you really want to kill the current job?</p>
-		<input type="text" id="studentId2" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
-	  </div>
+        <div class="row">
+          <div class="span8">
+            <p>Do you really want to kill the current job? Swipe MavID to confirm.</p>
+            <div>Patron ID:
+              <input type="text" id="studentId2" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+	          </div>
+          </div>
+          <div class="span4">
+            <img src="../static/img/octopuppet-sad.png">
+          </div>
+        </div>
+      </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-success" data-dismiss="modal">No, Wait..!!</button>
         <button id="studentIdVerification2" type="button" class="btn btn-danger" data-dismiss="modal" >Kill it. :(</button>

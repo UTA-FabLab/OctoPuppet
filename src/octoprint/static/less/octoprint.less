@@ -76,11 +76,11 @@ body {
 
 
 .navbar-inner-color (@base, @gradientalpha: 100%, @image: false) {
-  @top: lighten(@base, 0%);
-  @bottom: darken(@base, 0%);
+  @top: lighten(@base, 25%);
+  @bottom: darken(@base, 15%);
 
-  @text-color-light: @grayLighter;
-  @text-color-dark: @grayLighter;
+  @text-color-light: #f2f2f2;
+  @text-color-dark: #333333;
   @text-color: contrast(@bottom, @text-color-dark, @text-color-light);
 
   .navbar-background-color(fade(@top, @gradientalpha), fade(@bottom, @gradientalpha), @image);
@@ -94,15 +94,21 @@ body {
   }
 
   .nav {
-    li.dropdown.open>.dropdown-toggle, li.dropdown.active>.dropdown-toggle, li.dropdown.open.active>.dropdown-toggle {
+    >li.dropdown.open>.dropdown-toggle, >li.dropdown.active>.dropdown-toggle, >li.dropdown.open.active>.dropdown-toggle {
       // invert for dropdown
       .navbar-background-color(fade(@bottom, @gradientalpha), fade(@top, @gradientalpha), @image);
+    }
+    >li>a:hover {
+      // darken for hover
+      @darkenedTop: darken(@top, 5%);
+      @darkenedBottom: darken(@bottom, 5%);
+      .navbar-background-color(fade(@darkenedTop, @gradientalpha), fade(@darkenedBottom, @gradientalpha), @image);
     }
   }
 }
 
 #navbar .navbar-inner {
-  @base: #020202;
+  @base: #F2F2F2;
   .navbar-inner-color(@base);
 
   &.transparent {
@@ -110,7 +116,7 @@ body {
   }
 
   &.red {
-    @base: #020202;
+    @base: #bd362f;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -118,7 +124,7 @@ body {
     }
   }
   &.orange {
-    @base: #020202;
+    @base: #F27728;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -126,7 +132,7 @@ body {
     }
   }
   &.yellow {
-    @base: #020202;
+    @base: #F2DE28;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -134,7 +140,7 @@ body {
     }
   }
   &.green {
-    @base: #020202;
+    @base: #77FF28;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -142,7 +148,7 @@ body {
     }
   }
   &.blue {
-    @base: #020202;
+    @base: #04c;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -150,7 +156,7 @@ body {
     }
   }
   &.violet {
-    @base: #020202;
+    @base: #7728FF;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -158,7 +164,7 @@ body {
     }
   }
   &.black {
-    @base: #020202;
+    @base: #383838;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -166,7 +172,7 @@ body {
     }
   }
   &.white {
-    @base: #020202;
+    @base: #eeeeee;
     .navbar-inner-color(@base);
 
     &.transparent {
@@ -174,12 +180,35 @@ body {
     }
   }
 
-  .brand span {
-    background-size: 20px 20px;
-    background-position: left center;
-    padding-left: 24px;
-    background-repeat: no-repeat;
+  .brand {
+    padding: 10px 20px 6px;
+
+    span {
+      padding-left: 26px;
+
+      // background properties left standalone intentionally, otherwise we overwrite the image
+      background-size: 20px 20px;
+      background-repeat: no-repeat;
+
+      display: inline-block;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: top;
+      line-height: 20px;
+      height: 24px;
+    }
   }
+}
+
+#navbar_login a.dropdown-toggle span {
+  display: inline-block;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
 }
 
 .octoprint-container {
@@ -189,9 +218,9 @@ body {
 
   .tab-content {
     padding: 9px 15px;
-    border-left: 1px solid #222;
-    border-right: 1px solid #222;
-    border-bottom: 1px solid #222;
+    border-left: 1px solid #DDD;
+    border-right: 1px solid #DDD;
+    border-bottom: 1px solid #DDD;
 
     @radius: 4px;
     .border-bottom-right-radius(@radius);
@@ -211,7 +240,7 @@ body {
     line-height: 40px;
     color: #333;
     border: 0;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid #E5E5E5;
     font-weight: normal;
   }
 
@@ -226,7 +255,7 @@ body {
         padding: 8px 15px;
         font-size: 14px;
         line-height: 20px;
-        color: #fff;
+        color: #000;
         text-decoration: none;
         background: none;
 
@@ -369,11 +398,9 @@ table {
 /** Temperature tab */
 
 #temperature-graph {
-  height: 550px;
+  height: 350px;
   width: 100%;
-  background-image: url("../img/graph-background.png");
-  background-position: center;
-  background-repeat: no-repeat;
+  background: url("../img/graph-background.png") no-repeat center;
 }
 
 .tab-content, .tab-pane {
@@ -551,6 +578,16 @@ ul.dropdown-menu li a {
 
       &.highlight {
         animation: highlightframes 2s;
+      }
+    }
+
+    .back {
+      .back-path {
+        white-space: nowrap;
+        span {
+          word-wrap: break-word;
+          white-space: pre-line;
+        }
       }
     }
   }

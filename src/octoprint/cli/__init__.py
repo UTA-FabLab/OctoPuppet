@@ -7,6 +7,7 @@ __copyright__ = "Copyright (C) 2015 The OctoPrint Project - Released under terms
 
 import click
 import octoprint
+import sys
 
 #~~ click context
 
@@ -159,8 +160,11 @@ def octo(ctx, **kwargs):
 			           "start|stop|restart\" is deprecated, please use "
 			           "\"octoprint daemon start|stop|restart\" from now on")
 
-			from octoprint.cli.server import daemon_command
-			ctx.invoke(daemon_command, command=daemon, **kwargs)
+			if sys.platform.startswith("linux") or sys.platform.startswith("freebsd"):
+				from octoprint.cli.server import daemon_command
+				ctx.invoke(daemon_command, command=daemon, **kwargs)
+			else:
+				click.echo("Sorry, daemon mode is not supported under your operating system right now")
 		else:
 			click.echo("Starting the server via \"octoprint\" is deprecated, "
 			           "please use \"octoprint serve\" from now on.")

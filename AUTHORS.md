@@ -74,7 +74,12 @@ date of first contribution):
   * [Mathias Rangel Wulff](https://github.com/mathiasrw)
   * [Clemens Niemeyer](https://github.com/clemniem)
   * ["I-am-me"](https://github.com/I-am-me)
+  * [J-J Heinonen](https://github.com/jammi)
   * [Noah Martin](https://github.com/noahsmartin)
+  * [Eyal Soha](https://github.com/eyal0)
+  * [Greg Hulands](https://github.com/ghulands)
+  * [Andreas Werner](https://github.com/gallore)
+  * [Shawn Bruce](https://github.com/kantlivelong)
 
 OctoPrint started off as a fork of [Cura](https://github.com/daid/Cura) by
 [Daid Braam](https://github.com/daid). Parts of its communication layer and

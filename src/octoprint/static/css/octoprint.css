@@ -1893,7 +1893,7 @@ ul.dropdown-menu li a {
 }
 /** GCODE viewer */
 #gcode .progress {
-  width: 588px;
+  width: 906px;
 }
 #gcode .progress .bar {
   -webkit-transition: width 0s linear;
@@ -1937,7 +1937,7 @@ ul.dropdown-menu li a {
 }
 #term .terminal #terminal-output,
 #term .terminal #terminal-output-lowfi {
-  min-height: 340px;
+  min-height: 540px;
   margin-bottom: 5px;
 }
 #term #terminal-sendpanel {

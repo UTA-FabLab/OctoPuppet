@@ -12,8 +12,8 @@ $(function() {
         self.plainLogLines = ko.observableArray([]);
         self.plainLogLines.extend({ throttle: 500 });
 
-        self.buffer = ko.observable(300);
-        self.upperLimit = ko.observable(1499);
+        self.buffer = ko.observable(1000);
+        self.upperLimit = ko.observable(2999);
 
         self.command = ko.observable(undefined);
 

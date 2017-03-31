@@ -5011,7 +5011,7 @@ input[type="submit"].btn.btn-mini {
 .pagination ul > li > a:focus,
 .pagination ul > .active > a,
 .pagination ul > .active > span {
-  background-color: #33b5e5;
+  background-color: #282828;
 }
 
 .pagination ul > .active > a,

@@ -272,7 +272,7 @@ $(function() {
 			console.log(m_request_body);
 
 			$.ajax({
-				url: "httpss://fabapp-dev.uta.edu/api/materials.php",
+				url: "FLUD_BASE/materials.php",
 				type:"POST",
 				dataType: "json",
 				contentType: "application/json; charset=UTF-8",

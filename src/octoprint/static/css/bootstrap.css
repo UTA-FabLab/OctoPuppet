@@ -3503,7 +3503,7 @@ input[type="button"].btn-block {
   background-image: linear-gradient(to bottom, #333333, #191919);
   background-repeat: repeat-x;
   border-color: #191919 #191919 #000000;
-  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  border-top-color: rgba(51,51,51, 0.1) rgba(51,51,51, 0.1) rgba(51,51,51, 0.25);
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff333333', endColorstr='#ff191919', GradientType=0);
   filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
 }
@@ -6675,8 +6675,8 @@ div.subnav-fixed {
   background-image: -o-linear-gradient(top, #333333, #191919);
   background-image: linear-gradient(to bottom, #333333, #191919);
   background-repeat: repeat-x;
-  border-color: #191919 #191919 #000000;
-  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  border-color: #444 #000 #191919;
+  border-color: rgba(68, 68, 68, 0.1) rgba(0, 0, 0, 0.1) rgba(25, 25, 25, 0.25);
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff333333', endColorstr='#ff191919', GradientType=0);
   filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
 }

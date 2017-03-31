@@ -111,25 +111,27 @@ function check_id_valid(){
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      <center>
         <h4 class="modal-title">Cancel: Swipe Mav Express Card to confirm</h4>
+      </center>
       </div>
-      <div class="modal-body">
-        <div class="row">
-          <div class="span8">
-            <p>Do you really want to kill the current job? Swipe MavID to confirm.</p>
-            <div>Patron ID:
-              <input type="text" id="studentId2" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
-	          </div>
-          </div>
-          <div class="span4">
-            <img src="../static/img/octopuppet-sad.png">
-          </div>
-        </div>
+      <center>
+      <div class="modal-body" style="overflow: auto; max-height: 809px;">
+      	<h4>
+        	<p>Do you really want to kill the current job?</p>
+			    <p>Swipe MavID to confirm.</p>
+        </h4>
+        <img src="../static/img/octopuppet-sad.png" align="middle">
+        <p>Patron ID:</p>
+        <div>
+        	<input type="text" id="studentId2" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" oncopy="return false" oncut="return false" ondrag="return false" ondrop="return false" autocomplete="off">
+	      </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="text-align: center;">
         <button type="button" class="btn btn-success" data-dismiss="modal">No, Wait..!!</button>
         <button id="studentIdVerification2" type="button" class="btn btn-danger" data-dismiss="modal" >Kill it. :(</button>
       </div>
+    </center>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->

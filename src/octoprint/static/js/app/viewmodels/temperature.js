@@ -41,7 +41,7 @@ $(function() {
         self._historyTemperatureDataBacklog = [];
 
         self._printerProfileUpdated = function() {
-            var graphColors = ["red", "orange", "green", "brown", "purple"];
+            var graphColors = ["orange", "yellow", "green", "brown", "purple"];
             var heaterOptions = {};
             var tools = self.tools();
             var color;
@@ -77,7 +77,7 @@ $(function() {
             // print bed
             if (currentProfileData && currentProfileData.heatedBed()) {
                 self.hasBed(true);
-                heaterOptions["bed"] = {name: gettext("Bed"), color: "yellow"};
+                heaterOptions["bed"] = {name: gettext("Bed"), color: "blue"};
             } else {
                 self.hasBed(false);
             }
@@ -295,7 +295,7 @@ $(function() {
                     });
                     data.push({
                         label: gettext("Target") + " " + heaterOptions[type].name + ": " + targetTemp,
-                        color: pusher.color(heaterOptions[type].color).shade(0.75).html(),
+                        color: pusher.color(heaterOptions[type].color).tint(0.5).html(),
                         data: targets
                     });
 

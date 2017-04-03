@@ -511,6 +511,7 @@ def _process_templates():
 	# navbar
 
 	templates["navbar"]["entries"] = dict(
+		fabapp=dict(template="navbar/fabapp.jinja2", _div="navbar_fabapp"),
 		settings=dict(template="navbar/settings.jinja2", _div="navbar_settings", styles=["display: none"], data_bind="visible: loginState.isAdmin"),
 		systemmenu=dict(template="navbar/systemmenu.jinja2", _div="navbar_systemmenu", styles=["display: none"], classes=["dropdown"], data_bind="visible: loginState.isAdmin", custom_bindings=False),
 		login=dict(template="navbar/login.jinja2", _div="navbar_login", classes=["dropdown"], custom_bindings=False),

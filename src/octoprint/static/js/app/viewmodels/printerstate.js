@@ -35,6 +35,7 @@ $(function() {
         self.printTimeLeftOrigin = ko.observable(undefined);
         self.sd = ko.observable(undefined);
         self.timelapse = ko.observable(undefined);
+        self.t_id = ko.observable(undefined);
 
         self.busyFiles = ko.observableArray([]);
 
@@ -162,6 +163,27 @@ $(function() {
             } else {
                 return "-";
             }
+        });
+        self.t_id = ko.pureComputed(function() {
+          $.ajax({
+            type:"GET",
+            contentType: "application/json; charset=UTF-8",
+            url: API_BASEURL + "files/local/" + self.filename(),
+            headers: { 'X-Api-Key': 'UTALab16' },
+            success:function (api_file_data){
+              // file_data_json = $.parseJSON(api_file_data);
+              self.t_id = JSON.stringify(api_file_data.trans_id)
+              console.log(self.t_id);
+            },
+            error: function(errMsg){
+              console.log("No file is loaded.");
+            }
+          });
+          if (self.isPrinting() || self.isPaused() || self.isError()) {
+              return self.t_id;
+          } else {
+              return " ---";
+          }
         });
 
         self.fromCurrentData = function(data) {

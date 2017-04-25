@@ -462,6 +462,7 @@ def gcodeFileCommand(filename, target):
 
 	# valid file commands, dict mapping command name to mandatory parameters
 	valid_commands = {
+		"id":[],
 		"select": [],
 		"slice": [],
 		"copy": ["destination"],
@@ -472,7 +473,17 @@ def gcodeFileCommand(filename, target):
 	if response is not None:
 		return response
 
-	if command == "select":
+
+ 	if command == "id":
+ 		if "trans_id" in data:
+ 			trans_id = data["trans_id"]
+ 			del data["trans_id"]
+
+ 			fileManager.remove_additional_metadata(target, filename, "trans_id")
+ 			fileManager.set_additional_metadata(target, filename, "trans_id", trans_id)
+
+ 		return make_response("set ID to %s, current metadata is '%s'" % (trans_id, fileManager.get_metadata(target, filename)), 200)
+ 	elif command == "select":
 		if not _verifyFileExists(target, filename):
 			return make_response("File not found on '%s': %s" % (target, filename), 404)
 

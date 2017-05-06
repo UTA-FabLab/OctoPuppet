@@ -164,26 +164,25 @@ $(function() {
                 return "-";
             }
         });
-        self.t_id = ko.pureComputed(function() {
+        self.get_t_id = ko.computed(function() {
           $.ajax({
             type:"GET",
             contentType: "application/json; charset=UTF-8",
             url: API_BASEURL + "files/local/" + self.filename(),
             headers: { 'X-Api-Key': 'UTALab16' },
             success:function (api_file_data){
-              // file_data_json = $.parseJSON(api_file_data);
-              self.t_id = JSON.stringify(api_file_data.trans_id)
-              console.log(self.t_id);
+              var file_data_t_id = JSON.stringify(api_file_data.trans_id)
+              if (self.isPrinting() || self.isPaused() || self.isError()) {
+                self.t_id(file_data_t_id)
+                console.log(file_data_t_id);
+              } else {
+                self.t_id("---")
+              }
             },
             error: function(errMsg){
               console.log("No file is loaded.");
             }
           });
-          if (self.isPrinting() || self.isPaused() || self.isError()) {
-              return self.t_id;
-          } else {
-              return " ---";
-          }
         });
 
         self.fromCurrentData = function(data) {

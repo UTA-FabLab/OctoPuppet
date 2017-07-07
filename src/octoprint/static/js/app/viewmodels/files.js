@@ -115,7 +115,7 @@ $(function() {
                     return data["type"] && (data["type"] == "model" || data["type"] == "folder");
                 }
             },
-            "name",
+            "upload",
             [],
             [["sd", "local"], ["machinecode", "model"]],
             0

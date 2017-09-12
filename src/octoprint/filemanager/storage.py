@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
@@ -9,10 +9,18 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 import logging
 import os
 import pylru
-import tempfile
 import re
 import math
 import shutil
+
+try:
+	from os import scandir, walk
+except ImportError:
+	from scandir import scandir, walk
+
+from octoprint.util import atomic_write
+from contextlib import contextmanager
+from copy import deepcopy
 
 import octoprint.filemanager
 
@@ -22,7 +30,6 @@ class StorageInterface(object):
 	"""
 	Interface of storage adapters for OctoPrint.
 	"""
-
 
 	@property
 	def analysis_backlog(self):
@@ -38,11 +45,47 @@ class StorageInterface(object):
 		return
 		yield
 
+	def analysis_backlog_for_path(self, path=None):
+		# empty generator pattern, yield is intentionally unreachable
+		return
+		yield
+
+	def last_modified(self, path=None, recursive=False):
+		"""
+		Get the last modification date of the specified ``path`` or ``path``'s subtree.
+
+		Args:
+		    path (str or None): Path for which to determine the subtree's last modification date. If left out or
+		        set to None, defatuls to storage root.
+		    recursive (bool): Whether to determine only the date of the specified ``path`` (False, default) or
+		        the whole ``path``'s subtree (True).
+
+		Returns: (float) The last modification date of the indicated subtree
+		"""
+		raise NotImplementedError()
+
+	def file_in_path(self, path, filepath):
+		"""
+		Returns whether the file indicated by ``file`` is inside ``path`` or not.
+		:param string path: the path to check
+		:param string filepath: path to the file
+		:return: ``True`` if the file is inside the path, ``False`` otherwise
+		"""
+		return NotImplementedError()
+
 	def file_exists(self, path):
 		"""
 		Returns whether the file indicated by ``path`` exists or not.
 		:param string path: the path to check for existence
 		:return: ``True`` if the file exists, ``False`` otherwise
+		"""
+		raise NotImplementedError()
+
+	def folder_exists(self, path):
+		"""
+		Returns whether the folder indicated by ``path`` exists or not.
+		:param string path: the path to check for existence
+		:return: ``True`` if the folder exists, ``False`` otherwise
 		"""
 		raise NotImplementedError()
 
@@ -59,14 +102,22 @@ class StorageInterface(object):
 
 		   {
 		     "some_folder": {
+		       "name": "some_folder",
+		       "path": "some_folder",
 		       "type": "folder",
 		       "children": {
 		         "some_sub_folder": {
+		           "name": "some_sub_folder",
+		           "path": "some_folder/some_sub_folder",
 		           "type": "folder",
+		           "typePath": ["folder"],
 		           "children": { ... }
 		         },
 		         "some_file.gcode": {
+		           "name": "some_file.gcode",
+		           "path": "some_folder/some_file.gcode",
 		           "type": "machinecode",
+		           "typePath": ["machinecode", "gcode"],
 		           "hash": "<sha1 hash>",
 		           "links": [ ... ],
 		           ...
@@ -74,13 +125,19 @@ class StorageInterface(object):
 		         ...
 		       }
 		     "test.gcode": {
+		       "name": "test.gcode",
+		       "path": "test.gcode",
 		       "type": "machinecode",
+		       "typePath": ["machinecode", "gcode"],
 		       "hash": "<sha1 hash>",
 		       "links": [...],
 		       ...
 		     },
 		     "test.stl": {
+		       "name": "test.stl",
+		       "path": "test.stl",
 		       "type": "model",
+		       "typePath": ["model", "stl"],
 		       "hash": "<sha1 hash>",
 		       "links": [...],
 		       ...
@@ -99,7 +156,9 @@ class StorageInterface(object):
 
 	def add_folder(self, path, ignore_existing=True):
 		"""
-		Adds a folder as ``path``. The ``path`` will be sanitized.
+		Adds a folder as ``path``
+
+		The ``path`` will be sanitized.
 
 		:param string path:          the path of the new folder
 		:param bool ignore_existing: if set to True, no error will be raised if the folder to be added already exists
@@ -109,11 +168,33 @@ class StorageInterface(object):
 
 	def remove_folder(self, path, recursive=True):
 		"""
-		Removes the folder at ``path``.
+		Removes the folder at ``path``
 
 		:param string path:    the path of the folder to remove
 		:param bool recursive: if set to True, contained folders and files will also be removed, otherwise and error will
 		                       be raised if the folder is not empty (apart from ``.metadata.yaml``) when it's to be removed
+		"""
+		raise NotImplementedError()
+
+	def copy_folder(self, source, destination):
+		"""
+		Copys the folder ``source`` to ``destination``
+
+		:param string source: path to the source folder
+		:param string destination: path to destination
+
+		:return: the path in the storage to the copy of the folder
+		"""
+		raise NotImplementedError()
+
+	def move_folder(self, source, destination):
+		"""
+		Moves the folder ``source`` to ``destination``
+
+		:param string source: path to the source folder
+		:param string destination: path to destination
+
+		:return: the new path in the storage to the folder
 		"""
 		raise NotImplementedError()
 
@@ -134,10 +215,42 @@ class StorageInterface(object):
 
 	def remove_file(self, path):
 		"""
-		Removes the file at ``path``. Will also take care of deleting the corresponding entries
+		Removes the file at ``path``
+
+		Will also take care of deleting the corresponding entries
 		in the metadata and deleting all links pointing to the file.
 
 		:param string path: path of the file to remove
+		"""
+		raise NotImplementedError()
+
+	def copy_file(self, source, destination):
+		"""
+		Copys the file ``source`` to ``destination``
+
+		:param string source: path to the source file
+		:param string destination: path to destination
+
+		:return: the path in the storage to the copy of the file
+		"""
+		raise NotImplementedError()
+
+	def move_file(self, source, destination):
+		"""
+		Moves the file ``source`` to ``destination``
+
+		:param string source: path to the source file
+		:param string destination: path to destination
+
+		:return: the new path in the storage to the file
+		"""
+		raise NotImplementedError()
+
+	def has_analysis(self, path):
+		"""
+		Returns whether the file at path has been analysed yet
+
+		:param path: virtual path to the file for which to retrieve the metadata
 		"""
 		raise NotImplementedError()
 
@@ -159,11 +272,11 @@ class StorageInterface(object):
 		  * ``model``: adds a link to a model from which the file was created/sliced, expected additional data is the ``name``
 		    and optionally the ``hash`` of the file to link to. If the link can be resolved against another file on the
 		    current ``path``, not only will it be added to the links of ``name`` but a reverse link of type ``machinecode``
-		    refering to ``name`` and its hash will also be added to the linked ``model`` file
+		    referring to ``name`` and its hash will also be added to the linked ``model`` file
 		  * ``machinecode``: adds a link to a file containing machine code created from the current file (model), expected
 		    additional data is the ``name`` and optionally the ``hash`` of the file to link to. If the link can be resolved
 		    against another file on the current ``path``, not only will it be added to the links of ``name`` but a reverse
-		    link of type ``model`` refering to ``name`` and its hash will also be added to the linked ``model`` file.
+		    link of type ``model`` referring to ``name`` and its hash will also be added to the linked ``model`` file.
 		  * ``web``: adds a location on the web associated with this file (e.g. a website where to download a model),
 		    expected additional data is a ``href`` attribute holding the website's URL and optionally a ``retrieved``
 		    attribute describing when the content was retrieved
@@ -282,6 +395,25 @@ class StorageInterface(object):
 		raise NotImplementedError()
 
 
+class StorageError(Exception):
+	UNKNOWN = "unknown"
+	INVALID_DIRECTORY = "invalid_directory"
+	INVALID_FILE = "invalid_file"
+	INVALID_SOURCE = "invalid_source"
+	INVALID_DESTINATION = "invalid_destination"
+	DOES_NOT_EXIST = "does_not_exist"
+	ALREADY_EXISTS = "already_exists"
+	NOT_EMPTY = "not_empty"
+
+	def __init__(self, message, code=None, cause=None):
+		BaseException.__init__(self)
+		self.message = message
+		self.cause = cause
+
+		if code is None:
+			code = StorageError.UNKNOWN
+		self.code = code
+
 
 class LocalFileStorage(StorageInterface):
 	"""
@@ -307,10 +439,11 @@ class LocalFileStorage(StorageInterface):
 		if not os.path.exists(self.basefolder) and create:
 			os.makedirs(self.basefolder)
 		if not os.path.exists(self.basefolder) or not os.path.isdir(self.basefolder):
-			raise RuntimeError("{basefolder} is not a valid directory".format(**locals()))
+			raise StorageError("{basefolder} is not a valid directory".format(**locals()), code=StorageError.INVALID_DIRECTORY)
 
 		import threading
-		self._metadata_lock = threading.Lock()
+		self._metadata_lock_mutex = threading.RLock()
+		self._metadata_locks = dict()
 
 		self._metadata_cache = pylru.lrucache(10)
 
@@ -355,7 +488,13 @@ class LocalFileStorage(StorageInterface):
 
 	@property
 	def analysis_backlog(self):
-		for entry in self._analysis_backlog_generator():
+		return self.analysis_backlog_for_path()
+
+	def analysis_backlog_for_path(self, path=None):
+		if path:
+			path = self.sanitize_path(path)
+
+		for entry in self._analysis_backlog_generator(path):
 			yield entry
 
 	def _analysis_backlog_generator(self, path=None):
@@ -365,35 +504,67 @@ class LocalFileStorage(StorageInterface):
 		metadata = self._get_metadata(path)
 		if not metadata:
 			metadata = dict()
-		for entry in os.listdir(path):
-			if is_hidden_path(entry) or not octoprint.filemanager.valid_file_type(entry):
+		for entry in scandir(path):
+			if is_hidden_path(entry.name):
 				continue
 
-			absolute_path = os.path.join(path, entry)
-			if os.path.isfile(absolute_path):
-				if not entry in metadata or not isinstance(metadata[entry], dict) or not "analysis" in metadata[entry]:
-					printer_profile_rels = self.get_link(absolute_path, "printerprofile")
+			if entry.is_file() and octoprint.filemanager.valid_file_type(entry.name):
+				if not entry.name in metadata or not isinstance(metadata[entry.name], dict) or not "analysis" in metadata[entry.name]:
+					printer_profile_rels = self.get_link(entry.path, "printerprofile")
 					if printer_profile_rels:
 						printer_profile_id = printer_profile_rels[0]["id"]
 					else:
 						printer_profile_id = None
 
-					yield entry, absolute_path, printer_profile_id
-			elif os.path.isdir(absolute_path):
-				for sub_entry in self._analysis_backlog_generator(absolute_path):
-					yield self.join_path(entry, sub_entry[0]), sub_entry[1], sub_entry[2]
+					yield entry.name, entry.path, printer_profile_id
+			elif os.path.isdir(entry.path):
+				for sub_entry in self._analysis_backlog_generator(entry.path):
+					yield self.join_path(entry.name, sub_entry[0]), sub_entry[1], sub_entry[2]
+
+	def last_modified(self, path=None, recursive=False):
+		if path is None:
+			path = self.basefolder
+		else:
+			path = os.path.join(self.basefolder, path)
+
+		def last_modified_for_path(p):
+			metadata = os.path.join(p, ".metadata.yaml")
+			if os.path.exists(metadata):
+				return max(os.stat(p).st_mtime, os.stat(metadata).st_mtime)
+			else:
+				return os.stat(p).st_mtime
+
+		if recursive:
+			return max(last_modified_for_path(root) for root, _, _ in walk(path))
+		else:
+			return last_modified_for_path(path)
+
+	def file_in_path(self, path, filepath):
+		filepath = self.sanitize_path(filepath)
+		path = self.sanitize_path(path)
+
+		return filepath == path or filepath.startswith(path + os.sep)
 
 	def file_exists(self, path):
 		path, name = self.sanitize(path)
 		file_path = os.path.join(path, name)
 		return os.path.exists(file_path) and os.path.isfile(file_path)
 
+	def folder_exists(self, path):
+		path, name = self.sanitize(path)
+		folder_path = os.path.join(path, name)
+		return os.path.exists(folder_path) and os.path.isdir(folder_path)
+
 	def list_files(self, path=None, filter=None, recursive=True):
 		if path:
 			path = self.sanitize_path(path)
+			base = self.path_in_storage(path)
+			if base:
+				base += "/"
 		else:
 			path = self.basefolder
-		return self._list_folder(path, entry_filter=filter, recursive=recursive)
+			base = ""
+		return self._list_folder(path, base=base, entry_filter=filter, recursive=recursive)
 
 	def add_folder(self, path, ignore_existing=True):
 		path, name = self.sanitize(path)
@@ -401,7 +572,7 @@ class LocalFileStorage(StorageInterface):
 		folder_path = os.path.join(path, name)
 		if os.path.exists(folder_path):
 			if not ignore_existing:
-				raise RuntimeError("{name} does already exist in {path}".format(**locals()))
+				raise StorageError("{name} does already exist in {path}".format(**locals()), code=StorageError.ALREADY_EXISTS)
 		else:
 			os.mkdir(folder_path)
 
@@ -414,29 +585,81 @@ class LocalFileStorage(StorageInterface):
 		if not os.path.exists(folder_path):
 			return
 
-		contents = os.listdir(folder_path)
-		if ".metadata.yaml" in contents:
-			contents.remove(".metadata.yaml")
-		if contents and not recursive:
-			raise RuntimeError("{name} in {path} is not empty".format(**locals()))
+		empty = True
+		for entry in scandir(folder_path):
+			if entry.name == ".metadata.yaml":
+				continue
+			empty = False
+			break
+
+		if not empty and not recursive:
+			raise StorageError("{name} in {path} is not empty".format(**locals()), code=StorageError.NOT_EMPTY)
 
 		import shutil
 		shutil.rmtree(folder_path)
 
+		self._delete_metadata(folder_path)
+
+	def _get_source_destination_data(self, source, destination):
+		"""Prepares data dicts about source and destination for copy/move."""
+		source_path, source_name = self.sanitize(source)
+		destination_path, destination_name = self.sanitize(destination)
+
+		source_fullpath = os.path.join(source_path, source_name)
+		destination_fullpath = os.path.join(destination_path, destination_name)
+
+		if not os.path.exists(source_fullpath):
+			raise StorageError("{} in {} does not exist".format(source_name, source_path), code=StorageError.INVALID_SOURCE)
+
+		if not os.path.isdir(destination_path):
+			raise StorageError("Destination path {} does not exist or is not a folder".format(destination_path), code=StorageError.INVALID_DESTINATION)
+		if os.path.exists(destination_fullpath):
+			raise StorageError("{} does already exist in {}".format(destination_name, destination_path), code=StorageError.INVALID_DESTINATION)
+
+		source_data = dict(
+			path=source_path,
+			name=source_name,
+			fullpath=source_fullpath,
+		)
+		destination_data = dict(
+			path=destination_path,
+			name=destination_name,
+			fullpath=destination_fullpath,
+		)
+		return source_data, destination_data
+
+	def copy_folder(self, source, destination):
+		source_data, destination_data = self._get_source_destination_data(source, destination)
+
+		try:
+			shutil.copytree(source_data["fullpath"], destination_data["fullpath"])
+		except Exception as e:
+			raise StorageError("Could not copy %s in %s to %s in %s" % (source_data["name"], source_data["path"], destination_data["name"], destination_data["path"]), cause=e)
+
+		return self.path_in_storage(destination_data["fullpath"])
+
+	def move_folder(self, source, destination):
+		source_data, destination_data = self._get_source_destination_data(source, destination)
+
+		try:
+			shutil.move(source_data["fullpath"], destination_data["fullpath"])
+		except Exception as e:
+			raise StorageError("Could not move %s in %s to %s in %s" % (source_data["name"], source_data["path"], destination_data["name"], destination_data["path"]), cause=e)
+
+		self._delete_metadata(source_data["fullpath"])
+
+		return self.path_in_storage(destination_data["fullpath"])
+
 	def add_file(self, path, file_object, printer_profile=None, links=None, allow_overwrite=False):
 		path, name = self.sanitize(path)
 		if not octoprint.filemanager.valid_file_type(name):
-			raise RuntimeError("{name} is an unrecognized file type".format(**locals()))
-
-		metadata = self._get_metadata(path)
-		if not metadata:
-			metadata = dict()
+			raise StorageError("{name} is an unrecognized file type".format(**locals()), code=StorageError.INVALID_FILE)
 
 		file_path = os.path.join(path, name)
 		if os.path.exists(file_path) and not os.path.isfile(file_path):
-			raise RuntimeError("{name} does already exist in {path} and is not a file".format(**locals()))
+			raise StorageError("{name} does already exist in {path} and is not a file".format(**locals()), code=StorageError.ALREADY_EXISTS)
 		if os.path.exists(file_path) and not allow_overwrite:
-			raise RuntimeError("{name} does already exist in {path} and overwriting is prohibited".format(**locals()))
+			raise StorageError("{name} does already exist in {path} and overwriting is prohibited".format(**locals()), code=StorageError.ALREADY_EXISTS)
 
 		# search file for kisslicer analysis lines
 		try:
@@ -458,51 +681,53 @@ class LocalFileStorage(StorageInterface):
 
 		# save the file's hash to the metadata of the folder
 		file_hash = self._create_hash(file_path)
-		if not name in metadata or not "hash" in metadata[name] or metadata[name]["hash"] != file_hash:
-			# make sure to create a new metadata entry if we've never seen that file with that content before
-			file_metadata = dict(
-				hash=file_hash
-			)
-			metadata[name] = file_metadata
-			
-			# if kisslicer build time estimate was found, convert to a mysql time compatible unit and store
-			if build_time:
-				re1='.*?'	# Non-greedy match on filler
-				re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+		metadata = self._get_metadata_entry(path, name, default=dict())
+		metadata_dirty = False
+		if not "hash" in metadata or metadata["hash"] != file_hash:
+			metadata["hash"] = file_hash
+			metadata_dirty = True
+		if "analysis" in metadata:
+			del metadata["analysis"]
+			metadata_dirty = True
+		# if kisslicer build time estimate was found, convert to a mysql time compatible unit and store
+		if build_time:
+			re1='.*?'	# Non-greedy match on filler
+			re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
 
-				rg = re.compile(re1+re2,re.IGNORECASE|re.DOTALL)
-				m = rg.search(build_time)
-				if m:
-					float1=m.group(1)
-					build_time_float = float(float1)
-					h, m = divmod(build_time_float, 60)
-					s = math.ceil((build_time_float-int(build_time_float))*60)
-					build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2) 
-					metadata[name]["est_build_time"] = build_time_str
-			else:
-				pass
-				#metadata[name]["est_build_time"] = "No build time found in gcode"
-				
-				
-			# if kisslicer materials used estimates were found, capture and store
-			if build_mat_used:
-				re1='.*?'	# Non-greedy match on filler
-				re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
-				re3='.*?'	# Non-greedy match on filler
-				re4='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 2
-
-				rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
-				m = rg.search(build_mat_used)
-				if m:
-					float1=m.group(1)
-					float2=m.group(2)
-					metadata[name]["est_flmnt_vol"] = float2
-					metadata[name]["est_flmnt_len"] = float1
-			else:
-				pass
-				#metadata[name]["est_flmnt_vol"] = "No materials used data found in gcode"
+			rg = re.compile(re1+re2,re.IGNORECASE|re.DOTALL)
+			m = rg.search(build_time)
+			if m:
+				float1=m.group(1)
+				build_time_float = float(float1)
+				h, m = divmod(build_time_float, 60)
+				s = math.ceil((build_time_float-int(build_time_float))*60)
+				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2) 
+				metadata["est_build_time"] = build_time_str
+		else:
+			pass
+			#metadata[name]["est_build_time"] = "No build time found in gcode"
 			
-			self._save_metadata(path, metadata)
+			
+		# if kisslicer materials used estimates were found, capture and store
+		if build_mat_used:
+			re1='.*?'	# Non-greedy match on filler
+			re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+			re3='.*?'	# Non-greedy match on filler
+			re4='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 2
+
+			rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
+			m = rg.search(build_mat_used)
+			if m:
+				float1=m.group(1)
+				float2=m.group(2)
+				metadata["est_flmnt_vol"] = float2
+				metadata["est_flmnt_len"] = float1
+		else:
+			pass
+			#metadata[name]["est_flmnt_vol"] = "No materials used data found in gcode"
+
+		if metadata_dirty:
+			self._update_metadata_entry(path, name, metadata)
 
 		# process any links that were also provided for adding to the file
 		if not links:
@@ -521,44 +746,57 @@ class LocalFileStorage(StorageInterface):
 	def remove_file(self, path):
 		path, name = self.sanitize(path)
 
-		metadata = self._get_metadata(path)
-
 		file_path = os.path.join(path, name)
 		if not os.path.exists(file_path):
 			return
 		if not os.path.isfile(file_path):
-			raise RuntimeError("{name} in {path} is not a file".format(**locals()))
+			raise StorageError("{name} in {path} is not a file".format(**locals()), code=StorageError.INVALID_FILE)
 
 		try:
 			os.remove(file_path)
 		except Exception as e:
-			raise RuntimeError("Could not delete {name} in {path}".format(**locals()), e)
+			raise StorageError("Could not delete {name} in {path}".format(**locals()), cause=e)
 
-		if name in metadata:
-			if "hash" in metadata[name]:
-				hash = metadata[name]["hash"]
-				for m in metadata.values():
-					if not "links" in m:
-						continue
-					for link in m["links"]:
-						if "rel" in link and "hash" in link and (link["rel"] == "model" or link["rel"] == "machinecode") and link["hash"] == hash:
-							m["links"].remove(link)
-			del metadata[name]
-			self._save_metadata(path, metadata)
+		self._remove_metadata_entry(path, name)
+
+	def copy_file(self, source, destination):
+		source_data, destination_data = self._get_source_destination_data(source, destination)
+
+		try:
+			shutil.copy2(source_data["fullpath"], destination_data["fullpath"])
+		except Exception as e:
+			raise StorageError("Could not copy %s in %s to %s in %s" % (source_data["name"], source_data["path"], destination_data["name"], destination_data["path"]), cause=e)
+
+		self._copy_metadata_entry(source_data["path"], source_data["name"],
+		                          destination_data["path"], destination_data["name"])
+
+		return self.path_in_storage(destination_data["fullpath"])
+
+	def move_file(self, source, destination, allow_overwrite=False):
+		source_data, destination_data = self._get_source_destination_data(source, destination)
+
+		try:
+			shutil.move(source_data["fullpath"], destination_data["fullpath"])
+		except Exception as e:
+			raise StorageError("Could not move %s in %s to %s in %s" % (source_data["name"], source_data["path"], destination_data["name"], destination_data["path"]), cause=e)
+
+		self._copy_metadata_entry(source_data["path"], source_data["name"],
+		                          destination_data["path"], destination_data["name"],
+		                          delete_source=True)
+
+		return self.path_in_storage(destination_data["fullpath"])
+
+	def has_analysis(self, path):
+		metadata = self.get_metadata(path)
+		return "analysis" in metadata
 
 	def get_metadata(self, path):
 		path, name = self.sanitize(path)
-
-		metadata = self._get_metadata(path)
-		if name in metadata:
-			return metadata[name]
-		else:
-			return None
+		return self._get_metadata_entry(path, name)
 
 	def get_link(self, path, rel):
 		path, name = self.sanitize(path)
 		return self._get_links(name, path, rel)
-
 
 	def add_link(self, path, rel, data):
 		path, name = self.sanitize(path)
@@ -597,9 +835,6 @@ class LocalFileStorage(StorageInterface):
 			import octoprint.util
 			new_data = octoprint.util.dict_merge(current_data, data)
 			metadata[name][key] = new_data
-			metadata_dirty = True
-		elif key in metadata[name] and overwrite:
-			metadata[name][key] = data
 			metadata_dirty = True
 
 		if metadata_dirty:
@@ -802,7 +1037,15 @@ class LocalFileStorage(StorageInterface):
 				continue
 
 			printer_profile = history_entry["printerProfile"]
+			if not printer_profile:
+				continue
+
 			print_time = history_entry["printTime"]
+			try:
+				print_time = float(print_time)
+			except:
+				self._logger.warn("Invalid print time value found in print history for {} in {}/.metadata.yaml: {!r}".format(name, path, print_time))
+				continue
 
 			if not printer_profile in former_print_times:
 				former_print_times[printer_profile] = []
@@ -964,7 +1207,7 @@ class LocalFileStorage(StorageInterface):
 		if metadata_dirty:
 			self._save_metadata(path, metadata)
 
-	def _list_folder(self, path, entry_filter=None, recursive=True, **kwargs):
+	def _list_folder(self, path, base="", entry_filter=None, recursive=True, **kwargs):
 		if entry_filter is None:
 			entry_filter = kwargs.get("filter", None)
 
@@ -974,57 +1217,95 @@ class LocalFileStorage(StorageInterface):
 		metadata_dirty = False
 
 		result = dict()
-		for entry in os.listdir(path):
-			if is_hidden_path(entry):
+		for entry in scandir(path):
+			if is_hidden_path(entry.name):
 				# no hidden files and folders
 				continue
 
-			entry_path = os.path.join(path, entry)
+			try:
+				entry_name = entry.name
+				entry_path = entry.path
+				entry_is_file = entry.is_file()
+				entry_is_dir = entry.is_dir()
+				entry_stat = entry.stat()
+			except:
+				# error while trying to fetch file metadata, that might be thanks to file already having
+				# been moved or deleted - ignore it and continue
+				continue
 
 			try:
-				entry, entry_path = self._sanitize_entry(entry, path, entry_path)
+				new_entry_name, new_entry_path = self._sanitize_entry(entry_name, path, entry_path)
+				if entry_name != new_entry_name or entry_path != new_entry_path:
+					entry_name = new_entry_name
+					entry_path = new_entry_path
+					entry_stat = os.stat(entry_path)
 			except:
 				# error while trying to rename the file, we'll continue here and ignore it
 				continue
 
+			path_in_location = entry_name if not base else base + entry_name
+
 			# file handling
-			if os.path.isfile(entry_path):
-				file_type = octoprint.filemanager.get_file_type(entry)
-				if not file_type:
+			if entry_is_file:
+				type_path = octoprint.filemanager.get_file_type(entry_name)
+				if not type_path:
 					# only supported extensions
 					continue
 				else:
-					file_type = file_type[0]
+					file_type = type_path[0]
 
-				if entry in metadata and isinstance(metadata[entry], dict):
-					entry_data = metadata[entry]
+				if entry_name in metadata and isinstance(metadata[entry_name], dict):
+					entry_data = metadata[entry_name]
 				else:
-					entry_data = self._add_basic_metadata(path, entry, save=False, metadata=metadata)
+					entry_data = self._add_basic_metadata(path, entry_name, save=False, metadata=metadata)
 					metadata_dirty = True
 
 				# TODO extract model hash from source if possible to recreate link
 
-				if not entry_filter or entry_filter(entry, entry_data):
+				if not entry_filter or entry_filter(entry_name, entry_data):
 					# only add files passing the optional filter
 					extended_entry_data = dict()
 					extended_entry_data.update(entry_data)
-					extended_entry_data["name"] = entry
+					extended_entry_data["name"] = entry_name
+					extended_entry_data["path"] = path_in_location
 					extended_entry_data["type"] = file_type
-					stat = os.stat(entry_path)
+					extended_entry_data["typePath"] = type_path
+					stat = entry_stat
 					if stat:
 						extended_entry_data["size"] = stat.st_size
 						extended_entry_data["date"] = int(stat.st_mtime)
 
-					result[entry] = extended_entry_data
+					result[entry_name] = extended_entry_data
 
 			# folder recursion
-			elif os.path.isdir(entry_path) and recursive:
-				sub_result = self._list_folder(entry_path, entry_filter=entry_filter)
-				result[entry] = dict(
-					name=entry,
+			elif entry_is_dir:
+				entry_data = dict(
+					name=entry_name,
+					path=path_in_location,
 					type="folder",
-					children=sub_result
+					type_path=["folder"]
 				)
+				if recursive:
+					sub_result = self._list_folder(entry_path, base=path_in_location + "/", entry_filter=entry_filter,
+					                               recursive=recursive)
+					entry_data["children"] = sub_result
+
+				if not entry_filter or entry_filter(entry_name, entry_data):
+					def get_size():
+						total_size = 0
+						for element in entry_data["children"].values():
+							if "size" in element:
+								total_size += element["size"]
+
+						return total_size
+
+					# only add folders passing the optional filter
+					extended_entry_data = dict()
+					extended_entry_data.update(entry_data)
+					if recursive:
+						extended_entry_data["size"] = get_size()
+
+					result[entry_name] = extended_entry_data
 
 		# TODO recreate links if we have metadata less entries
 
@@ -1072,13 +1353,53 @@ class LocalFileStorage(StorageInterface):
 
 		return hash.hexdigest()
 
-	def _get_metadata(self, path):
-		if path in self._metadata_cache:
-			return self._metadata_cache[path]
+	def _get_metadata_entry(self, path, name, default=None):
+		with self._get_metadata_lock(path):
+			metadata = self._get_metadata(path)
+			return metadata.get(name, default)
 
-		metadata_path = os.path.join(path, ".metadata.yaml")
-		if os.path.exists(metadata_path):
-			with self._metadata_lock:
+	def _remove_metadata_entry(self, path, name):
+		with self._get_metadata_lock(path):
+			metadata = self._get_metadata(path)
+			if not name in metadata:
+				return
+
+			if "hash" in metadata[name]:
+				hash = metadata[name]["hash"]
+				for m in metadata.values():
+					if not "links" in m:
+						continue
+					links_hash = lambda link: "hash" in link and link["hash"] == hash and "rel" in link and (link["rel"] == "model" or link["rel"] == "machinecode")
+					m["links"] = [link for link in m["links"] if not links_hash(link)]
+
+			del metadata[name]
+			self._save_metadata(path, metadata)
+
+	def _update_metadata_entry(self, path, name, data):
+		with self._get_metadata_lock(path):
+			metadata = self._get_metadata(path)
+			metadata[name] = data
+			self._save_metadata(path, metadata)
+
+	def _copy_metadata_entry(self, source_path, source_name, destination_path, destination_name, delete_source=False):
+		with self._get_metadata_lock(source_path):
+			source_data = self._get_metadata_entry(source_path, source_name, default=dict())
+			if not source_data:
+				return
+
+			if delete_source:
+				self._remove_metadata_entry(source_path, source_name)
+
+		with self._get_metadata_lock(destination_path):
+			self._update_metadata_entry(destination_path, destination_name, source_data)
+
+	def _get_metadata(self, path):
+		with self._get_metadata_lock(path):
+			if path in self._metadata_cache:
+				return deepcopy(self._metadata_cache[path])
+
+			metadata_path = os.path.join(path, ".metadata.yaml")
+			if os.path.exists(metadata_path):
 				with open(metadata_path) as f:
 					try:
 						import yaml
@@ -1086,30 +1407,49 @@ class LocalFileStorage(StorageInterface):
 					except:
 						self._logger.exception("Error while reading .metadata.yaml from {path}".format(**locals()))
 					else:
-						self._metadata_cache[path] = metadata
+						self._metadata_cache[path] = deepcopy(metadata)
 						return metadata
-		return dict()
+			return dict()
 
 	def _save_metadata(self, path, metadata):
-		metadata_path = os.path.join(path, ".metadata.yaml")
-
-		with self._metadata_lock:
+		with self._get_metadata_lock(path):
+			metadata_path = os.path.join(path, ".metadata.yaml")
 			try:
 				import yaml
-				import shutil
-
-				file_obj = tempfile.NamedTemporaryFile(delete=False)
-				try:
-					yaml.safe_dump(metadata, stream=file_obj, default_flow_style=False, indent="  ", allow_unicode=True)
-					file_obj.close()
-					shutil.move(file_obj.name, metadata_path)
-				finally:
-					try:
-						if os.path.exists(file_obj.name):
-							os.remove(file_obj.name)
-					except Exception as e:
-						self._logger.warn("Could not delete file {}: {}".format(file_obj.name, str(e)))
+				with atomic_write(metadata_path) as f:
+					yaml.safe_dump(metadata, stream=f, default_flow_style=False, indent="  ", allow_unicode=True)
 			except:
 				self._logger.exception("Error while writing .metadata.yaml to {path}".format(**locals()))
 			else:
-				self._metadata_cache[path] = metadata
+				self._metadata_cache[path] = deepcopy(metadata)
+
+	def _delete_metadata(self, path):
+		with self._get_metadata_lock(path):
+			metadata_path = os.path.join(path, ".metadata.yaml")
+			if os.path.exists(metadata_path):
+				try:
+					os.remove(metadata_path)
+				except:
+					self._logger.exception("Error while deleting .metadata.yaml from {path}".format(**locals()))
+			if path in self._metadata_cache:
+				del self._metadata_cache[path]
+
+	@contextmanager
+	def _get_metadata_lock(self, path):
+		with self._metadata_lock_mutex:
+			if path not in self._metadata_locks:
+				import threading
+				self._metadata_locks[path] = (0, threading.RLock())
+
+			counter, lock = self._metadata_locks[path]
+			counter += 1
+			self._metadata_locks[path] = (counter, lock)
+
+			yield lock
+
+			counter = self._metadata_locks[path][0]
+			counter -= 1
+			if counter <= 0:
+				del self._metadata_locks[path]
+			else:
+				self._metadata_locks[path] = (counter, lock)

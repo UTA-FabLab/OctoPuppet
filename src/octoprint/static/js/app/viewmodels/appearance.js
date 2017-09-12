@@ -8,16 +8,23 @@ $(function() {
 
         self.brand = ko.pureComputed(function() {
             if (self.name())
-                return gettext("OctoPrint") + ": " + self.name();
+                return self.name();
             else
-                return gettext("OctoPrint");
+                return gettext("OctoPuppet");
+        });
+
+        self.fullbrand = ko.pureComputed(function() {
+            if (self.name())
+                return gettext("OctoPuppet") + ": " + self.name();
+            else
+                return gettext("OctoPuppet");
         });
 
         self.title = ko.pureComputed(function() {
             if (self.name())
-                return self.name() + " [" + gettext("OctoPrint") + "]";
+                return self.name() + " [" + gettext("OctoPuppet") + "]";
             else
-                return gettext("OctoPrint");
+                return gettext("OctoPuppet");
         });
     }
 

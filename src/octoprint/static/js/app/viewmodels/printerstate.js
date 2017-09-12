@@ -3,6 +3,7 @@ $(function() {
         var self = this;
 
         self.loginState = parameters[0];
+        self.settings = parameters[1];
 
         self.stateString = ko.observable(undefined);
         self.isErrorOrClosed = ko.observable(undefined);
@@ -25,6 +26,7 @@ $(function() {
         });
 
         self.filename = ko.observable(undefined);
+        self.filepath = ko.observable(undefined);
         self.progress = ko.observable(undefined);
         self.filesize = ko.observable(undefined);
         self.filepos = ko.observable(undefined);
@@ -161,6 +163,31 @@ $(function() {
                 return "-";
             }
         });
+        self.get_t_id = ko.computed(function() {
+          $.ajax({
+            type:"GET",
+            contentType: "application/json; charset=UTF-8",
+            url: API_BASEURL + "files/local/" + self.filename(),
+            headers: { 'X-Api-Key': 'UTALab16' },
+            success:function (api_file_data){
+              var file_data_t_id = JSON.stringify(api_file_data.trans_id)
+              return file_data_t_id;
+            },
+            error: function(errMsg){
+              console.log("No file is loaded.");
+              return gettext("Not Available")
+            }
+          });
+        });
+
+        self.t_id = ko.computed(function () {
+          if (self.isPrinting() || self.isPaused() || self.isError()) {
+            return self.get_t_id()
+            console.log(file_data_t_id);
+          } else {
+            return gettext("---")
+          }
+        });
 
         self.fromCurrentData = function(data) {
             self._fromData(data);
@@ -208,10 +235,12 @@ $(function() {
         self._processJobData = function(data) {
             if (data.file) {
                 self.filename(data.file.name);
+                self.filepath(data.file.path);
                 self.filesize(data.file.size);
                 self.sd(data.file.origin == "sdcard");
             } else {
                 self.filename(undefined);
+                self.filepath(undefined);
                 self.filesize(undefined);
                 self.sd(undefined);
             }
@@ -252,8 +281,8 @@ $(function() {
         self._processBusyFiles = function(data) {
             var busyFiles = [];
             _.each(data, function(entry) {
-                if (entry.hasOwnProperty("name") && entry.hasOwnProperty("origin")) {
-                    busyFiles.push(entry.origin + ":" + entry.name);
+                if (entry.hasOwnProperty("path") && entry.hasOwnProperty("origin")) {
+                    busyFiles.push(entry.origin + ":" + entry.path);
                 }
             });
             self.busyFiles(busyFiles);
@@ -262,13 +291,13 @@ $(function() {
         self.print = function() {
 			$("#studentIdModal").modal('show');
 			console.log("Showing student id modal");
-			
+
 			var m_request_body = JSON.stringify({type: "device_id", device: "DEV_ID"});
-			
+
 			console.log(m_request_body);
-			
+
 			$.ajax({
-				url: "FLUD_BASE/fablab/materials.php",
+				url: "FLUD_BASE/materials.php",
 				type:"POST",
 				dataType: "json",
 				contentType: "application/json; charset=UTF-8",
@@ -277,11 +306,11 @@ $(function() {
 				{
 					console.log("Got response from materials.php");
 					console.log(data);
-					
+
 					var f_selector = document.getElementById("sel_filament");
-					
+
 					f_selector.options.length = 0;
-					
+
 					for ( var i = 0; i < data.length; i++) {
 						var f_item = data[i], id = f_item.m_id, desc = "($" +f_item.price + "/" + f_item.unit + ") - " + f_item.m_name;
 						var option = document.createElement("option");
@@ -289,23 +318,23 @@ $(function() {
 						option.textContent = desc;
 						f_selector.appendChild(option);
 					};
-					
+
 				}
 			});
-			
+
 			$.ajax({
-				url: "FLUD_BASE/fablab/purpose.php",
+				url: "FLUD_BASE/purpose.php",
 				dataType: 'json',
 				type: "GET",
 				success: function(data)
 				{
 					console.log("Got response from purpose.php");
 					console.log(data);
-					
+
 					var p_selector = document.getElementById("sel_purpose");
-					
+
 					p_selector.options.length = 0;
-					
+
 					for ( var i = 0; i < data.length; i++) {
 						var p_item = data[i], p_id = p_item.purp_id, p_desc = p_item.purpose
 						var option = document.createElement("option");
@@ -315,23 +344,24 @@ $(function() {
 					};
 				}
 			});
-			
+
 			console.log("sent AJAX requests for purpose and materials");
-			
+
 			$("#studentIdModal").on('shown', function() {
 				$("#studentId").val('');
+                $("#studentId2").val('');
 				$("#studentId").focus();
 				$("#studentIdVerification").attr("disabled", "disabled");
 			});
-			
+
 			$("#studentIdVerification").unbind("click").on("click", function()
 			{
 				var trans_response = "";
-				
+
 				if ( $("#studentId").val().length != 10) {
 					return false;
 				}
-				
+
 				$.ajax({
 					type:"GET",
 					contentType: "application/json; charset=UTF-8",
@@ -339,24 +369,24 @@ $(function() {
 					headers: { 'X-Api-Key': 'UTALab16' },
 					success:function (api_file_data){
 						var postBody = {type: "print", device_id: "DEV_ID"};
-						
+
 						postBody.uta_id = $("#studentId").val()
 						postBody.m_id = document.getElementById("sel_filament").options[document.getElementById("sel_filament").selectedIndex].value;
 						postBody.p_id = document.getElementById("sel_purpose").options[document.getElementById("sel_purpose").selectedIndex].value;
-						
+
 						postBody.filename = self.filename();
-						
+
 						postBody.est_filament_used = api_file_data.est_flmnt_vol;
-						
+
 						postBody.est_build_time = api_file_data.est_build_time;
-						
+
 						console.log(JSON.stringify(postBody));
-						
+
 						$.ajax({
 							type:"POST",
 							dataType: "json",
 							contentType: "application/json; charset=UTF-8",
-							url:"FLUD_BASE/fablab/flud.php",
+							url:"FLUD_BASE/flud.php",
 							data:JSON.stringify(postBody),
 							success: function(success_data){
 								console.log("got success back");
@@ -364,18 +394,18 @@ $(function() {
 								trans_response = success_data;
 								console.log("Transaction ID is:");
 								console.log(trans_response["trans_id"]);
-								
+
 								$("#studentIdModal").modal('hide');
-								
+
 								if(trans_response.hasOwnProperty('ERROR')){
 									alert(trans_response["ERROR"]);
 								}
-								
+
 								if(trans_response.hasOwnProperty('authorized')){
 									if (trans_response["authorized"] === "Y"){
-										
+
 										console.log("User Authorized");
-										
+
 										var tranBody = JSON.stringify({command:"id", trans_id:trans_response["trans_id"]});
 										$.ajax({
 											type:"POST",
@@ -386,25 +416,25 @@ $(function() {
 											success: function(response){console.log("Successfully saved trasaction ID data");
 																		console.log(response);}
 										});
-										
+
 										console.log(self.filename());
-										
+
 										if (self.isPaused()) {
 											$("#confirmation_dialog .confirmation_dialog_message").text(gettext("This will restart the print job from the beginning."));
 											$("#confirmation_dialog .confirmation_dialog_acknowledge").unbind("click");
 											$("#confirmation_dialog .confirmation_dialog_acknowledge").click(function(e) {e.preventDefault(); $("#confirmation_dialog").modal("hide"); self._jobCommand("restart");});
 											$("#confirmation_dialog").modal("show");
 										} else {
-											self._jobCommand("start");
+											OctoPrint.job.start();
 										}
-										
+
 									}
 									else {
 										alert("User Not Authorized!");
 										return false;
 									}
 								}
-								
+
 							},
 							error: function(errMsg){
 								$("#studentIdModal").modal('hide');
@@ -416,58 +446,45 @@ $(function() {
 					}
 				});
 			});
-			
-			
-
         };
 
         self.onlyPause = function() {
-            self.pause("pause");
+            OctoPrint.job.pause();
         };
 
         self.onlyResume = function() {
-            self.pause("resume");
+            OctoPrint.job.resume();
         };
 
         self.pause = function(action) {
-            action = action || "toggle";
-            self._jobCommand("pause", {"action": action});
+            OctoPrint.job.togglePause();
         };
 
         self.cancel = function() {
-            self._jobCommand("cancel");
-        };
+            $("#cancelIdModal").modal('show');
+            console.log("Showing kill confirm modal");
+            $("#cancelIdModal").on('shown', function() {
+                $("#studentId1").val('');
+                $("#studentId2").val('');
+                $("#studentId2").focus();
+                $("#studentIdVerification2").attr("disabled", "disabled");
+            });
 
-        self._jobCommand = function(command, payload, callback) {
-            if (arguments.length == 1) {
-                payload = {};
-                callback = undefined;
-            } else if (arguments.length == 2 && typeof payload === "function") {
-                callback = payload;
-                payload = {};
-            }
-
-            var data = _.extend(payload, {});
-            data.command = command;
-
-            $.ajax({
-                url: API_BASEURL + "job",
-                type: "POST",
-                dataType: "json",
-                contentType: "application/json; charset=UTF-8",
-                data: JSON.stringify(data),
-                success: function(response) {
-                    if (callback != undefined) {
-                        callback();
-                    }
+            $("#studentIdVerification2").unbind("click").on("click", function()
+            {
+                if ( $("#studentId2").val().length != 10) {
+                    return false;
+                }
+                else{
+                  OctoPrint.job.cancel();
                 }
             });
-        }
+        };
     }
 
     OCTOPRINT_VIEWMODELS.push([
         PrinterStateViewModel,
-        ["loginStateViewModel"],
+        ["loginStateViewModel", "settingsViewModel"],
         ["#state_wrapper", "#drop_overlay"]
     ]);
 });

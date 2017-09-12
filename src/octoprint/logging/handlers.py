@@ -17,6 +17,21 @@ class CleaningTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler
 				os.remove(s)
 
 
+class OctoPrintLogHandler(CleaningTimedRotatingFileHandler):
+	rollover_callbacks = []
+
+	@classmethod
+	def registerRolloverCallback(cls, callback, *args, **kwargs):
+		cls.rollover_callbacks.append((callback, args, kwargs))
+
+	def doRollover(self):
+		CleaningTimedRotatingFileHandler.doRollover(self)
+
+		for rcb in self.__class__.rollover_callbacks:
+			callback, args, kwargs = rcb
+			callback(*args, **kwargs)
+
+
 class SerialLogHandler(logging.handlers.RotatingFileHandler):
 
 	_do_rollover = False
@@ -81,3 +96,56 @@ class SerialLogHandler(logging.handlers.RotatingFileHandler):
 		self.cleanupFiles()
 		if not self.delay:
 			self.stream = self._open()
+
+class RecordingLogHandler(logging.Handler):
+	def __init__(self, target=None, level=logging.NOTSET):
+		logging.Handler.__init__(self, level=level)
+		self._buffer = []
+		self._target = target
+
+	def emit(self, record):
+		self._buffer.append(record)
+
+	def setTarget(self, target):
+		self._target = target
+
+	def flush(self):
+		if not self._target:
+			return
+
+		self.acquire()
+		try:
+			for record in self._buffer:
+				self._target.handle(record)
+			self._buffer = []
+		finally:
+			self.release()
+
+	def close(self):
+		self.flush()
+		self.acquire()
+		try:
+			self._buffer = []
+		finally:
+			self.release()
+
+	def __len__(self):
+		return len(self._buffer)
+
+
+class CombinedLogHandler(logging.Handler):
+	def __init__(self, *handlers):
+		logging.Handler.__init__(self)
+		self._handlers = handlers
+
+	def setHandlers(self, *handlers):
+		self._handlers = handlers
+
+	def handle(self, record):
+		self.acquire()
+		try:
+			if self._handlers:
+				for handler in self._handlers:
+					handler.handle(record)
+		finally:
+			self.release()

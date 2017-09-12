@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
@@ -7,11 +7,7 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 
 import logging
 import os
-import datetime
-import stat
 import mimetypes
-import email
-import time
 import re
 
 import tornado
@@ -27,36 +23,6 @@ import tornado.tcpserver
 import tornado.util
 
 import octoprint.util
-
-
-#~~ Monkey patching
-
-
-def fix_ioloop_scheduling():
-	"""
-	This monkey patches tornado's :meth:``tornado.ioloop.PeriodicCallback._schedule_next`` method so it no longer
-	blocks for long times on slow machines (RPi) when the system time happens to change by a large amount (e.g. due to
-	the first ever contact to an NTP server).
-
-	Patch by @nosyjoe on Github. See this PR against tornado: https://github.com/tornadoweb/tornado/pull/1290
-	"""
-
-	import math
-
-	# patched implementation taken from PR
-	def _schedule_next(self):
-		if self._running:
-			current_time = self.io_loop.time()
-
-			if self._next_timeout <= current_time:
-				callback_time_sec = self.callback_time / 1000.0
-				self._next_timeout += (math.floor((current_time - self._next_timeout) / callback_time_sec) + 1) * callback_time_sec
-
-			self._timeout = self.io_loop.add_timeout(self._next_timeout, self._run)
-
-	# replace original implementation with patched version
-	import tornado.ioloop
-	tornado.ioloop.PeriodicCallback._schedule_next = _schedule_next
 
 
 #~~ WSGI middleware
@@ -141,7 +107,7 @@ class UploadStorageFallbackHandler(tornado.web.RequestHandler):
 		self._path = path
 
 		self._suffixes = dict((key, key) for key in ("name", "path", "content_type", "size"))
-		for suffix_type, suffix in suffixes.iteritems():
+		for suffix_type, suffix in suffixes.items():
 			if suffix_type in self._suffixes and suffix is not None:
 				self._suffixes[suffix_type] = suffix
 
@@ -560,7 +526,8 @@ class WsgiInputContainer(object):
 		if not data:
 			raise Exception("WSGI app did not call start_response")
 
-		status_code = int(data["status"].split()[0])
+		status_code, reason = data["status"].split(" ", 1)
+		status_code = int(status_code)
 		headers = data["headers"]
 		header_set = set(k.lower() for (k, v) in headers)
 		body = tornado.escape.utf8(body)
@@ -572,13 +539,12 @@ class WsgiInputContainer(object):
 		if "server" not in header_set:
 			headers.append(("Server", "TornadoServer/%s" % tornado.version))
 
-		parts = [tornado.escape.utf8("HTTP/1.1 " + data["status"] + "\r\n")]
+		start_line = tornado.httputil.ResponseStartLine("HTTP/1.1", status_code, reason)
+		header_obj = tornado.httputil.HTTPHeaders()
 		for key, value in headers:
-			parts.append(tornado.escape.utf8(key) + b": " + tornado.escape.utf8(value) + b"\r\n")
-		parts.append(b"\r\n")
-		parts.append(body)
-		request.write(b"".join(parts))
-		request.finish()
+			header_obj.add(key, value)
+		request.connection.write_headers(start_line, header_obj, chunk=body)
+		request.connection.finish()
 		self._log(status_code, request)
 
 	@staticmethod
@@ -613,22 +579,22 @@ class WsgiInputContainer(object):
 			host = request.host
 			port = 443 if request.protocol == "https" else 80
 		environ = {
-		"REQUEST_METHOD": request.method,
-		"SCRIPT_NAME": "",
-		"PATH_INFO": to_wsgi_str(tornado.escape.url_unescape(
-			request.path, encoding=None, plus=False)),
-		"QUERY_STRING": request.query,
-		"REMOTE_ADDR": request.remote_ip,
-		"SERVER_NAME": host,
-		"SERVER_PORT": str(port),
-		"SERVER_PROTOCOL": request.version,
-		"wsgi.version": (1, 0),
-		"wsgi.url_scheme": request.protocol,
-		"wsgi.input": request_body,
-		"wsgi.errors": sys.stderr,
-		"wsgi.multithread": False,
-		"wsgi.multiprocess": True,
-		"wsgi.run_once": False,
+			"REQUEST_METHOD": request.method,
+			"SCRIPT_NAME": "",
+			"PATH_INFO": to_wsgi_str(tornado.escape.url_unescape(
+				request.path, encoding=None, plus=False)),
+			"QUERY_STRING": request.query,
+			"REMOTE_ADDR": request.remote_ip,
+			"SERVER_NAME": host,
+			"SERVER_PORT": str(port),
+			"SERVER_PROTOCOL": request.version,
+			"wsgi.version": (1, 0),
+			"wsgi.url_scheme": request.protocol,
+			"wsgi.input": request_body,
+			"wsgi.errors": sys.stderr,
+			"wsgi.multithread": False,
+			"wsgi.multiprocess": True,
+			"wsgi.run_once": False,
 		}
 		if "Content-Type" in request.headers:
 			environ["CONTENT_TYPE"] = request.headers.pop("Content-Type")
@@ -649,7 +615,7 @@ class WsgiInputContainer(object):
 			log_method = access_log.error
 		request_time = 1000.0 * request.request_time()
 		summary = request.method + " " + request.uri + " (" + \
-				  request.remote_ip + ")"
+		          request.remote_ip + ")"
 		log_method("%d %s %.2fms", status_code, summary, request_time)
 
 
@@ -672,36 +638,24 @@ class CustomHTTPServer(tornado.httpserver.HTTPServer):
 
 	``default_max_body_size`` is the default maximum body size to apply if no specific one from ``max_body_sizes`` matches.
 	"""
+	def __init__(self, *args, **kwargs):
+		pass
 
-	def __init__(self, request_callback, no_keep_alive=False, io_loop=None,
-				 xheaders=False, ssl_options=None, protocol=None,
-				 decompress_request=False,
-				 chunk_size=None, max_header_size=None,
-				 idle_connection_timeout=None, body_timeout=None,
-				 max_body_sizes=None, default_max_body_size=None, max_buffer_size=None):
-		self.request_callback = request_callback
-		self.no_keep_alive = no_keep_alive
-		self.xheaders = xheaders
-		self.protocol = protocol
-		self.conn_params = CustomHTTP1ConnectionParameters(
-			decompress=decompress_request,
-			chunk_size=chunk_size,
-			max_header_size=max_header_size,
-			header_timeout=idle_connection_timeout or 3600,
-			max_body_sizes=max_body_sizes,
-			default_max_body_size=default_max_body_size,
-			body_timeout=body_timeout)
-		tornado.tcpserver.TCPServer.__init__(self, io_loop=io_loop, ssl_options=ssl_options,
-						   max_buffer_size=max_buffer_size,
-						   read_chunk_size=chunk_size)
-		self._connections = set()
+	def initialize(self, *args, **kwargs):
+		default_max_body_size = kwargs.pop("default_max_body_size", None)
+		max_body_sizes = kwargs.pop("max_body_sizes", None)
+
+		tornado.httpserver.HTTPServer.initialize(self, *args, **kwargs)
+
+		additional = dict(default_max_body_size=default_max_body_size,
+		                  max_body_sizes=max_body_sizes)
+		self.conn_params = CustomHTTP1ConnectionParameters.from_stock_params(self.conn_params, **additional)
 
 
 	def handle_stream(self, stream, address):
 		context = tornado.httpserver._HTTPRequestContext(stream, address,
-									  self.protocol)
-		conn = CustomHTTP1ServerConnection(
-			stream, self.conn_params, context)
+		                                                 self.protocol)
+		conn = CustomHTTP1ServerConnection(stream, self.conn_params, context)
 		self._connections.add(conn)
 		conn.start_serving(self)
 
@@ -718,7 +672,7 @@ class CustomHTTP1ServerConnection(tornado.http1connection.HTTP1ServerConnection)
 		try:
 			while True:
 				conn = CustomHTTP1Connection(self.stream, False,
-									   self.params, self.context)
+				                             self.params, self.context)
 				request_delegate = delegate.start_request(self, conn)
 				try:
 					ret = yield conn.read_response(request_delegate)
@@ -762,8 +716,13 @@ class CustomHTTP1Connection(tornado.http1connection.HTTP1Connection):
 		current request exceeds the individual max content length, the request processing is aborted and an
 		``HTTPInputError`` is raised.
 		"""
-		content_length = headers.get("Content-Length")
 		if "Content-Length" in headers:
+			if "Transfer-Encoding" in headers:
+				# Response cannot contain both Content-Length and
+				# Transfer-Encoding headers.
+				# http://tools.ietf.org/html/rfc7230#section-3.3.3
+				raise tornado.httputil.HTTPInputError(
+					"Response with both Transfer-Encoding and Content-Length")
 			if "," in headers["Content-Length"]:
 				# Proxies sometimes cause Content-Length headers to get
 				# duplicated.  If all the values are identical then we can
@@ -774,9 +733,14 @@ class CustomHTTP1Connection(tornado.http1connection.HTTP1Connection):
 						"Multiple unequal Content-Lengths: %r" %
 						headers["Content-Length"])
 				headers["Content-Length"] = pieces[0]
-			content_length = int(headers["Content-Length"])
 
-			content_length = int(content_length)
+			try:
+				content_length = int(headers["Content-Length"])
+			except ValueError:
+				# Handles non-integer Content-Length value.
+				raise tornado.httputil.HTTPInputError(
+					"Only integer Content-Length is allowed: %s" % headers["Content-Length"])
+
 			max_content_length = self._get_max_content_length(self._request_start_line.method, self._request_start_line.path)
 			if max_content_length is not None and 0 <= max_content_length < content_length:
 				raise tornado.httputil.HTTPInputError("Content-Length too long")
@@ -808,7 +772,7 @@ class CustomHTTP1Connection(tornado.http1connection.HTTP1Connection):
 		length if available, otherwise returns ``default_max_body_size``.
 
 		:param method: method of the request to match against
-		:param path: path od the request to match against
+		:param path: path of the request to match against
 		:return: determine maximum content length to apply to this request, max return 0 for unlimited allowed content
 		         length
 		"""
@@ -828,9 +792,20 @@ class CustomHTTP1ConnectionParameters(tornado.http1connection.HTTP1ConnectionPar
 	"""
 
 	def __init__(self, *args, **kwargs):
-		tornado.http1connection.HTTP1ConnectionParameters.__init__(self, args, kwargs)
-		self.max_body_sizes = kwargs["max_body_sizes"] if "max_body_sizes" in kwargs else list()
-		self.default_max_body_size = kwargs["default_max_body_size"] if "default_max_body_size" in kwargs else None
+		max_body_sizes = kwargs.pop("max_body_sizes", list())
+		default_max_body_size = kwargs.pop("default_max_body_size", None)
+
+		tornado.http1connection.HTTP1ConnectionParameters.__init__(self, *args, **kwargs)
+
+		self.max_body_sizes = max_body_sizes
+		self.default_max_body_size = default_max_body_size
+
+	@classmethod
+	def from_stock_params(cls, other, **additional):
+		kwargs = dict(other.__dict__)
+		for key, value in additional.items():
+			kwargs[key] = value
+		return cls(**kwargs)
 
 #~~ customized large response handler
 
@@ -844,7 +819,7 @@ class LargeResponseHandler(tornado.web.StaticFileHandler):
 	Arguments:
 	   path (str): The system path from which to serve files (this will be forwarded to the ``initialize`` method of
 	       :class:``~tornado.web.StaticFileHandler``)
-	   default_filename (str): The default filename to serve if none is explicitely specified and the request references
+	   default_filename (str): The default filename to serve if none is explicitly specified and the request references
 	       a subdirectory of the served path (this will be forwarded to the ``initialize`` method of
 	       :class:``~tornado.web.StaticFileHandler`` as the ``default_filename`` keyword parameter). Defaults to ``None``.
 	   as_attachment (bool): Whether to serve requested files with ``Content-Disposition: attachment`` header (``True``)
@@ -881,12 +856,16 @@ class LargeResponseHandler(tornado.web.StaticFileHandler):
 			self._access_validation(self.request)
 		if self._path_validation is not None:
 			self._path_validation(path)
+
+		if "cookie" in self.request.arguments:
+			self.set_cookie(self.request.arguments["cookie"][0], "true", path="/")
+
 		result = tornado.web.StaticFileHandler.get(self, path, include_body=include_body)
 		return result
 
 	def set_extra_headers(self, path):
 		if self._as_attachment:
-			self.set_header("Content-Disposition", "attachment")
+			self.set_header("Content-Disposition", "attachment; filename=%s" % os.path.basename(path))
 
 		if not self._allow_client_caching:
 			self.set_header("Cache-Control", "max-age=0, must-revalidate, private")
@@ -927,7 +906,7 @@ class UrlProxyHandler(tornado.web.RequestHandler):
 
 	  * ``Date``, ``Cache-Control``, ``Expires``, ``ETag``, ``Server``, ``Content-Type`` and ``Location`` will be copied over.
 	  * If ``as_attachment`` is set to True, ``Content-Disposition`` will be set to ``attachment``. If ``basename`` is
-	    set including the attachement's ``filename`` attribute will be set to the base name followed by the extension
+	    set including the attachment's ``filename`` attribute will be set to the base name followed by the extension
 	    guessed based on the MIME type from the ``Content-Type`` header of the response. If no extension can be guessed
 	    no ``filename`` attribute will be set.
 

@@ -162,6 +162,12 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
         return undefined;
     };
 
+    self.resetPage = function() {
+        if (self.currentPage() > self.lastPage()) {
+            self.currentPage(self.lastPage());
+        }
+    };
+
     //~~ searching
 
     self.changeSearchFunction = function(searchFunction) {
@@ -242,7 +248,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
         // determine comparator
         var comparator = undefined;
         var currentSorting = self.currentSorting();
-        if (typeof currentSorting !== undefined && typeof self.supportedSorting[currentSorting] !== undefined) {
+        if (typeof currentSorting !== 'undefined' && typeof self.supportedSorting[currentSorting] !== 'undefined') {
             comparator = self.supportedSorting[currentSorting];
         }
 
@@ -252,17 +258,17 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
         // filter if necessary
         var filters = self.currentFilters();
         _.each(filters, function(filter) {
-            if (typeof filter !== undefined && typeof supportedFilters[filter] !== undefined)
+            if (typeof filter !== 'undefined' && typeof supportedFilters[filter] !== 'undefined')
                 result = _.filter(result, supportedFilters[filter]);
         });
 
         // search if necessary
-        if (typeof self.searchFunction !== undefined && self.searchFunction) {
+        if (typeof self.searchFunction !== 'undefined' && self.searchFunction) {
             result = _.filter(result, self.searchFunction);
         }
 
         // sort if necessary
-        if (typeof comparator !== undefined)
+        if (typeof comparator !== 'undefined')
             result.sort(comparator);
 
         // set result list
@@ -522,9 +528,13 @@ function cleanTemperature(temp) {
     return temp;
 }
 
-function formatTemperature(temp) {
+function formatTemperature(temp, showF) {
     if (!temp || temp < 10) return gettext("off");
-    return _.sprintf("%.1f&deg;C", temp);
+    if (showF) {
+        return _.sprintf("%.1f&deg;C (%.1f&deg;F)", temp, temp * 9 / 5 + 32);
+    } else {
+        return _.sprintf("%.1f&deg;C", temp);
+    }
 }
 
 function pnotifyAdditionalInfo(inner) {
@@ -573,22 +583,254 @@ function hideOfflineOverlay() {
     $("#offline_overlay").hide();
 }
 
-function showConfirmationDialog(message, onacknowledge) {
-    var confirmationDialog = $("#confirmation_dialog");
-    var confirmationDialogAck = $(".confirmation_dialog_acknowledge", confirmationDialog);
+function showMessageDialog(msg, options) {
+    options = options || {};
+    if (_.isPlainObject(msg)) {
+        options = msg;
+    } else {
+        options.message = msg;
+    }
 
-    $(".confirmation_dialog_message", confirmationDialog).text(message);
-    confirmationDialogAck.unbind("click");
-    confirmationDialogAck.bind("click", function (e) {
-        e.preventDefault();
-        $("#confirmation_dialog").modal("hide");
-        onacknowledge(e);
+    var title = options.title || "";
+    var message = options.message || "";
+    var close = options.close || gettext("Close");
+    var onclose = options.onclose || undefined;
+    var onshow = options.onshow || undefined;
+    var onshown = options.onshown || undefined;
+
+    if (_.isString(message)) {
+        message = $("<p>" + message + "</p>");
+    }
+
+    var modalHeader = $('<a href="javascript:void(0)" class="close" data-dismiss="modal" aria-hidden="true">&times;</a><h3>' + title + '</h3>');
+    var modalBody = $(message);
+    var modalFooter = $('<a href="javascript:void(0)" class="btn" data-dismiss="modal" aria-hidden="true">' + close + '</a>');
+
+    var modal = $('<div></div>')
+        .addClass('modal hide fade')
+        .append($('<div></div>').addClass('modal-header').append(modalHeader))
+        .append($('<div></div>').addClass('modal-body').append(modalBody))
+        .append($('<div></div>').addClass('modal-footer').append(modalFooter));
+
+    modal.on("hidden", function() {
+        if (onclose && _.isFunction(onclose)) {
+            onclose();
+        }
     });
-    confirmationDialog.modal("show");
+
+    if (onshow) {
+        modal.on("show", onshow);
+    }
+
+    if (onshown) {
+        modal.on("shown", onshown);
+    }
+
+    modal.modal("show");
+    return modal;
+}
+
+function showConfirmationDialog(msg, onacknowledge, options) {
+    options = options || {};
+    if (_.isPlainObject(msg)) {
+        options = msg;
+    } else {
+        options.message = msg;
+        options.onproceed = onacknowledge;
+    }
+
+    var title = options.title || gettext("Are you sure?");
+    var message = options.message || "";
+    var question = options.question || gettext("Are you sure you want to proceed?");
+    var cancel = options.cancel || gettext("Cancel");
+    var proceed = options.proceed || gettext("Proceed");
+    var proceedClass = options.proceedClass || "danger";
+    var onproceed = options.onproceed || undefined;
+    var dialogClass = options.dialogClass || "";
+
+    var modalHeader = $('<a href="javascript:void(0)" class="close" data-dismiss="modal" aria-hidden="true">&times;</a><h3>' + title + '</h3>');
+    var modalBody = $('<p>' + message + '</p><p>' + question + '</p>');
+
+    var cancelButton = $('<a href="javascript:void(0)" class="btn">' + cancel + '</a>')
+        .attr("data-dismiss", "modal")
+        .attr("aria-hidden", "true");
+    var proceedButton = $('<a href="javascript:void(0)" class="btn">' + proceed + '</a>')
+        .addClass("btn-" + proceedClass);
+
+    var modal = $('<div></div>')
+        .addClass('modal hide fade')
+        .addClass(dialogClass)
+        .append($('<div></div>').addClass('modal-header').append(modalHeader))
+        .append($('<div></div>').addClass('modal-body').append(modalBody))
+        .append($('<div></div>').addClass('modal-footer').append(cancelButton).append(proceedButton));
+    modal.modal("show");
+
+    proceedButton.click(function(e) {
+        e.preventDefault();
+        modal.modal("hide");
+        if (onproceed && _.isFunction(onproceed)) {
+            onproceed(e);
+        }
+    });
+
+    return modal;
+}
+
+/**
+ * Shows a progress modal depending on a supplied promise.
+ *
+ * Will listen to the supplied promise, update the progress on .progress events and
+ * enabling the close button and (optionally) closing the dialog on promise resolve.
+ *
+ * The calling code should call "notify" on the deferred backing the promise and supply
+ * two parameters: the text to display on the progress bar and the optional output field and
+ * a boolean value indicating whether the operation behind that update was successful or not.
+ * Non-successful progress updates will remove the barClassSuccess class from the progress bar and
+ * apply the barClassFailure class and also apply the outputClassFailure to the produced line
+ * in the output.
+ *
+ * To determine the progress, calling code should supply the prognosed maximum number of
+ * progress events. An internal counter will increment on each progress event and used together
+ * with the max value to calculate the percentage to display on the progress bar.
+ *
+ * If no max value is set, the progress bar will show a striped animation at 100% fill status
+ * to visualize "unknown but ongoing" status.
+ *
+ * Available options:
+ *
+ *   * title: the title of the modal, defaults to "Progress"
+ *   * message: the message of the modal, defaults to ""
+ *   * buttonText: the text on the close button, defaults to "Close"
+ *   * max: maximum number of expected progress events (when 100% will be reached), defaults
+ *     to undefined
+ *   * close: whether to close the dialog on completion, defaults to false
+ *   * output: whether to display the progress texts in an output field, defaults to false
+ *   * dialogClass: additional class to apply to the dialog div
+ *   * barClassSuccess: additional class for the progress bar while all progress events are
+ *     successful
+ *   * barClassFailure: additional class for the progress bar when a progress event was
+ *     unsuccessful
+ *   * outputClassSuccess: additional class for successful output lines
+ *   * outputClassFailure: additional class for unsuccessful output lines
+ *
+ * @param options modal options
+ * @param promise promise to monitor
+ * @returns {*|jQuery} the modal object
+ */
+function showProgressModal(options, promise) {
+    var title = options.title || gettext("Progress");
+    var message = options.message || "";
+    var buttonText = options.button || gettext("Close");
+    var max = options.max || undefined;
+    var close = options.close || false;
+    var output = options.output || false;
+
+    var dialogClass = options.dialogClass || "";
+    var barClassSuccess = options.barClassSuccess || "";
+    var barClassFailure = options.barClassFailure || "bar-danger";
+    var outputClassSuccess = options.outputClassSuccess || "";
+    var outputClassFailure = options.outputClassFailure || "text-error";
+
+    var modalHeader = $('<h3>' + title + '</h3>');
+    var paragraph = $('<p>' + message + '</p>');
+
+    var progress = $('<div class="progress progress-text-centered"></div>');
+    var progressBar = $('<div class="bar"></div>')
+        .addClass(barClassSuccess);
+    var progressTextBack = $('<span class="progress-text-back"></span>');
+    var progressTextFront = $('<span class="progress-text-front"></span>')
+        .width(progress.width());
+
+    if (max == undefined) {
+        progress.addClass("progress-striped active");
+        progressBar.width("100%");
+    }
+
+    progressBar
+        .append(progressTextFront);
+    progress
+        .append(progressTextBack)
+        .append(progressBar);
+
+    var button = $('<button class="btn">' + buttonText + '</button>')
+        .prop("disabled", true)
+        .attr("data-dismiss", "modal")
+        .attr("aria-hidden", "true");
+
+    var modalBody = $('<div></div>')
+        .addClass('modal-body')
+        .append(paragraph)
+        .append(progress);
+
+    var pre;
+    if (output) {
+        pre = $("<pre class='terminal pre-scrollable' style='height: 70px; font-size: 0.8em'></pre>");
+        modalBody.append(pre);
+    }
+
+    var modal = $('<div></div>')
+        .addClass('modal hide fade')
+        .addClass(dialogClass)
+        .append($('<div></div>').addClass('modal-header').append(modalHeader))
+        .append(modalBody)
+        .append($('<div></div>').addClass('modal-footer').append(button));
+    modal.modal({keyboard: false, backdrop: "static", show: true});
+
+    var counter = 0;
+    promise
+        .progress(function(text, success) {
+            var value;
+
+            if (max === undefined || max <= 0) {
+                value = 100;
+            } else {
+                counter++;
+                value = Math.max(Math.min(counter * 100 / max, 100), 0);
+            }
+
+            // update progress bar
+            progressBar.width(String(value) + "%");
+            progressTextFront.text(text);
+            progressTextBack.text(text);
+            progressTextFront.width(progress.width());
+
+            // if not successful, apply failure class
+            if (!success && !progressBar.hasClass(barClassFailure)) {
+                progressBar
+                    .removeClass(barClassSuccess)
+                    .addClass(barClassFailure);
+            }
+
+            if (output && pre) {
+                if (success) {
+                    pre.append($("<span class='" + outputClassSuccess + "'>" + text + "</span><br>"));
+                } else {
+                    pre.append($("<span class='" + outputClassFailure + "'>" + text + "</span><br>"));
+                }
+                pre.scrollTop(pre[0].scrollHeight - pre.height());
+            }
+        })
+        .done(function() {
+            button.prop("disabled", false);
+            if (close) {
+                modal.modal("hide");
+            }
+        })
+        .fail(function() {
+            button.prop("disabled", false);
+        });
+
+    return modal;
 }
 
 function showReloadOverlay() {
     $("#reloadui_overlay").show();
+}
+
+function wrapPromiseWithAlways(p) {
+    var deferred = $.Deferred();
+    p.always(function() { deferred.resolve.apply(deferred, arguments); });
+    return deferred.promise();
 }
 
 function commentableLinesToArray(lines) {
@@ -605,6 +847,175 @@ function splitTextToArray(text, sep, stripEmpty, filter) {
     );
 }
 
+/**
+ * Returns true if comparing data and oldData yields changes, false otherwise.
+ *
+ * E.g.
+ *
+ *   hasDataChanged(
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "three", key: "value"}},
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "3", four: "4"}}
+ *   )
+ *
+ * will return
+ *
+ *   true
+ *
+ * and
+ *
+ *   hasDataChanged(
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "3"}},
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "3"}}
+ *   )
+ *
+ * will return
+ *
+ *   false
+ *
+ * Note that this will assume data and oldData to be structurally identical (same keys)
+ * and is optimized to check for value changes, not key updates.
+ */
+function hasDataChanged(data, oldData) {
+    if (data == undefined) {
+        return false;
+    }
+
+    if (oldData == undefined) {
+        return true;
+    }
+
+    if (_.isPlainObject(data)) {
+        return _.any(_.keys(data), function(key) {return hasDataChanged(data[key], oldData[key]);});
+    } else {
+        return !_.isEqual(data, oldData);
+    }
+}
+
+/**
+ * Compare provided data and oldData plain objects and only return those
+ * substructures of data that actually changed.
+ *
+ * E.g.
+ *
+ *   getOnlyChangedData(
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "three"}},
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "3"}}
+ *   )
+ *
+ * will return
+ *
+ *   {fnord: {three: "three"}}
+ *
+ * and
+ *
+ *   getOnlyChangedData(
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "3"}},
+ *     {foo: "bar", fnord: {one: "1", two: "2", three: "3"}}
+ *   )
+ *
+ * will return
+ *
+ *   {}
+ *
+ * Note that this will assume data and oldData to be structurally identical (same keys)
+ * and is optimized to check for value changes, not key updates.
+ */
+function getOnlyChangedData(data, oldData) {
+    if (data == undefined) {
+        return {};
+    }
+
+    if (oldData == undefined) {
+        return data;
+    }
+
+    var f = function(root, oldRoot) {
+        if (!_.isPlainObject(root)) {
+            return root;
+        }
+
+        var retval = {};
+        _.forOwn(root, function(value, key) {
+            var oldValue = undefined;
+            if (oldRoot != undefined && oldRoot.hasOwnProperty(key)) {
+                oldValue = oldRoot[key];
+            }
+            if (_.isPlainObject(value)) {
+                if (oldValue == undefined) {
+                    retval[key] = value;
+                } else if (hasDataChanged(value, oldValue)) {
+                    retval[key] = f(value, oldValue);
+                }
+            } else {
+                if (!_.isEqual(value, oldValue)) {
+                    retval[key] = value;
+                }
+            }
+        });
+        return retval;
+    };
+
+    return f(data, oldData);
+}
+
+function callViewModels(allViewModels, method, callback) {
+    callViewModelsIf(allViewModels, method, undefined, callback);
+}
+
+function callViewModelsIf(allViewModels, method, condition, callback) {
+    if (condition == undefined || !_.isFunction(condition)) {
+        condition = function() { return true; };
+    }
+
+    var parameters = undefined;
+    if (!_.isFunction(callback)) {
+        // if callback is not a function that means we are supposed to directly
+        // call the view model method instead of providing it to the callback
+        // - let's figure out how
+
+        if (callback == undefined) {
+            // directly call view model method with no parameters
+            parameters = undefined;
+            log.trace("Calling method", method, "on view models");
+        } else if (_.isArray(callback)) {
+            // directly call view model method with these parameters
+            parameters = callback;
+            log.trace("Calling method", method, "on view models with specified parameters", parameters);
+        } else {
+            // ok, this doesn't make sense, callback is neither undefined nor
+            // an array, we'll return without doing anything
+            return;
+        }
+
+        // we reset this here so we now further down that we want to call
+        // the method directly
+        callback = undefined;
+    } else {
+        log.trace("Providing method", method, "on view models to specified callback", callback);
+    }
+
+    _.each(allViewModels, function(viewModel) {
+        if (viewModel.hasOwnProperty(method) && condition(viewModel, method)) {
+            try {
+                if (callback == undefined) {
+                    if (parameters != undefined) {
+                        // call the method with the provided parameters
+                        viewModel[method].apply(viewModel, parameters);
+                    } else {
+                        // call the method without parameters
+                        viewModel[method]();
+                    }
+                } else {
+                    // provide the method to the callback
+                    callback(viewModel[method], viewModel);
+                }
+            } catch (exc) {
+                log.error("Error calling", method, "on view model", viewModel.constructor.name, ":", (exc.stack || exc));
+            }
+        }
+    });
+}
+
 var sizeObservable = function(observable) {
     return ko.computed({
         read: function() {
@@ -617,4 +1028,50 @@ var sizeObservable = function(observable) {
             }
         }
     })
+};
+
+var getQueryParameterByName = function(name, url) {
+    // from http://stackoverflow.com/a/901144/2028598
+    if (!url) {
+      url = window.location.href;
+    }
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+};
+
+/**
+ * Escapes unprintable ASCII characters in the provided string.
+ *
+ * E.g. turns a null byte in the string into "\x00".
+ *
+ * Only characters 0 to 31, 127 and 255 will be escaped, that
+ * should leave printable characters and unicode alone.
+ *
+ * Originally based on
+ * https://gist.github.com/mathiasbynens/1243213#gistcomment-53590
+ *
+ * @param str The string to escape
+ * @returns {string}
+ */
+var escapeUnprintableCharacters = function(str) {
+    var result = "";
+    var index = 0;
+    var charCode;
+
+    while (!isNaN(charCode = str.charCodeAt(index))) {
+        if (charCode < 32 || charCode == 127 || charCode == 255) {
+            // special hex chars
+            result += "\\x" + (charCode > 15 ? "" : "0") + charCode.toString(16)
+        } else {
+            // anything else
+            result += str[index];
+        }
+
+        index++;
+    }
+    return result;
 };

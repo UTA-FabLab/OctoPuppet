@@ -60,38 +60,47 @@ $(function() {
                     "language": self.interface_language()
                 }
             };
-            self.updateSettings(self.currentUser().name, settings, function() {
-                // close dialog
-                self.currentUser(undefined);
-                self.userSettingsDialog.modal("hide");
-                self.loginState.reloadUser();
-            });
+            self.updateSettings(self.currentUser().name, settings)
+                .done(function() {
+                    // close dialog
+                    self.currentUser(undefined);
+                    self.userSettingsDialog.modal("hide");
+                    self.loginState.reloadUser();
+                });
         };
 
         self.generateApikey = function() {
             if (!CONFIG_ACCESS_CONTROL) return;
-            self.users.generateApikey(self.currentUser().name, function(response) {
-                self.access_apikey(response.apikey);
-            });
+
+            var generate = function() {
+                self.users.generateApikey(self.currentUser().name)
+                    .done(function(response) {
+                      self.access_apikey(response.apikey);
+                    });
+            };
+
+            if (self.access_apikey()) {
+                showConfirmationDialog(gettext("This will generate a new API Key. The old API Key will cease to function immediately."),
+                    generate);
+            } else {
+                generate();
+            }
         };
 
         self.deleteApikey = function() {
             if (!CONFIG_ACCESS_CONTROL) return;
-            self.users.deleteApikey(self.currentUser().name, function() {
-                self.access_apikey(undefined);
-            });
+            if (!self.access_apikey()) return;
+
+            showConfirmationDialog(gettext("This will delete the API Key. It will cease to to function immediately."), function() {
+                self.users.deleteApikey(self.currentUser().name)
+                    .done(function() {
+                        self.access_apikey(undefined);
+                    });
+            })
         };
 
-        self.updateSettings = function(username, settings, callback) {
-            if (!CONFIG_ACCESS_CONTROL) return;
-
-            $.ajax({
-                url: API_BASEURL + "users/" + username + "/settings",
-                type: "PATCH",
-                contentType: "application/json; charset=UTF-8",
-                data: JSON.stringify(settings),
-                success: callback
-            });
+        self.updateSettings = function(username, settings) {
+            return OctoPrint.users.saveSettings(username, settings);
         };
 
         self.saveEnabled = function() {
@@ -104,18 +113,10 @@ $(function() {
 
         self.onAllBound = function(allViewModels) {
             self.userSettingsDialog.on('show', function() {
-                _.each(allViewModels, function(viewModel) {
-                    if (viewModel.hasOwnProperty("onUserSettingsShown")) {
-                        viewModel.onUserSettingsShown();
-                    }
-                });
+                callViewModels(allViewModels, "onUserSettingsShown");
             });
             self.userSettingsDialog.on('hidden', function() {
-                _.each(allViewModels, function(viewModel) {
-                    if (viewModel.hasOwnProperty("onUserSettingsHidden")) {
-                        viewModel.onUserSettingsHidden();
-                    }
-                });
+                callViewModels(allViewModels, "onUserSettingsHidden");
             });
         }
 

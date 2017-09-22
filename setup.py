@@ -45,7 +45,9 @@ INSTALL_REQUIRES = [
 	"future>=0.15,<0.16",
 	"scandir>=1.3,<1.4",
 	"websocket-client>=0.40,<0.41",
-	"python-dateutil>=2.6,<2.7"
+	"python-dateutil>=2.6,<2.7",
+	"wrapt>=1.10.10,<1.11",
+	"futures>=3.1.1,<3.2"
 ]
 
 if sys.platform == "darwin":
@@ -61,9 +63,10 @@ EXTRA_REQUIRES = dict(
 		"ddt",
 
 		# Documentation dependencies
-		"sphinx>=1.3,<1.4",
+		"sphinx>=1.6,<1.7",
 		"sphinxcontrib-httpdomain",
-		"sphinx_rtd_theme",
+		"sphinxcontrib-mermaid",
+		"sphinx_bootstrap_theme",
 
 		# PyPi upload related
 		"pypandoc"

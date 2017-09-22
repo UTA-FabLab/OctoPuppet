@@ -909,6 +909,20 @@ Use the following settings to configure the server:
        # Command to shut down the system OctoPrint is running on, defaults to being unset
        systemShutdownCommand: sudo shutdown -h now
 
+     # Configuration of the regular online connectivity check
+     onlineCheck:
+       # whether the online check is enabled, defaults to false due to valid privacy concerns
+       enabled: false
+
+       # interval in which to check for online connectivity (in seconds)
+       interval: 300
+
+       # DNS host against which to check (default: 8.8.8.8 aka Google's DNS)
+       host: 8.8.8.8
+
+       # DNS port against which to check (default: 53 - the default DNS port)
+       port: 53
+
      # Settings of when to display what disk space warning
      diskspace:
 
@@ -943,8 +957,8 @@ Use the following settings to configure the server:
      * ``X-Scheme``: should contain your custom URL scheme to use (if different from ``http``), e.g. ``https``
 
    If you use these headers OctoPrint will work both via the reverse proxy as well as when called directly. Take a look
-   `into OctoPrint's wiki <https://github.com/foosel/OctoPrint/wiki/Reverse-proxy-configuration-examples>`_ for a couple
-   of examples on how to configure this.
+   `into OctoPrint's wiki <https://github.com/foosel/OctoPrint/wiki/Reverse-proxy-configuration-examples>`_ for some
+   examples on how to configure this.
 
 .. _sec-configuration-config_yaml-slicing:
 

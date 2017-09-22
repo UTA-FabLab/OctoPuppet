@@ -22,6 +22,8 @@ from octoprint.util import atomic_write
 from contextlib import contextmanager
 from copy import deepcopy
 
+from past.builtins import basestring
+
 import octoprint.filemanager
 
 from octoprint.util import is_hidden_path
@@ -682,13 +684,10 @@ class LocalFileStorage(StorageInterface):
 		# save the file's hash to the metadata of the folder
 		file_hash = self._create_hash(file_path)
 		metadata = self._get_metadata_entry(path, name, default=dict())
-		metadata_dirty = False
 		if not "hash" in metadata or metadata["hash"] != file_hash:
-			metadata["hash"] = file_hash
-			metadata_dirty = True
-		if "analysis" in metadata:
-			del metadata["analysis"]
-			metadata_dirty = True
+			# hash changed -> throw away old metadata
+			self._update_metadata_entry(path, name, dict(hash=file_hash))
+
 		# if kisslicer build time estimate was found, convert to a mysql time compatible unit and store
 		if build_time:
 			re1='.*?'	# Non-greedy match on filler
@@ -725,9 +724,6 @@ class LocalFileStorage(StorageInterface):
 		else:
 			pass
 			#metadata[name]["est_flmnt_vol"] = "No materials used data found in gcode"
-
-		if metadata_dirty:
-			self._update_metadata_entry(path, name, metadata)
 
 		# process any links that were also provided for adding to the file
 		if not links:
@@ -1407,8 +1403,9 @@ class LocalFileStorage(StorageInterface):
 					except:
 						self._logger.exception("Error while reading .metadata.yaml from {path}".format(**locals()))
 					else:
-						self._metadata_cache[path] = deepcopy(metadata)
-						return metadata
+						if isinstance(metadata, dict):
+							self._metadata_cache[path] = deepcopy(metadata)
+							return metadata
 			return dict()
 
 	def _save_metadata(self, path, metadata):

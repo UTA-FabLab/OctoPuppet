@@ -25,7 +25,7 @@ $(function() {
                     return false;
                 }
 
-                return (value >= 0 && value <= 999);
+                return (value >= 0 && value <= 300);
             });
 
             entry.newOffsetValid = ko.pureComputed(function() {
@@ -460,8 +460,8 @@ $(function() {
             }
             try {
                 value = parseInt(value);
-                if (value > 999) return;
-                item.newTarget(value + 1);
+                if (value > 300) return;
+                item.newTarget(value + 10);
                 self.autosendTarget(item);
             } catch (ex) {
                 // do nothing
@@ -476,7 +476,7 @@ $(function() {
             try {
                 value = parseInt(value);
                 if (value <= 0) return;
-                item.newTarget(value - 1);
+                item.newTarget(value - 10);
                 self.autosendTarget(item);
             } catch (ex) {
                 // do nothing
@@ -539,7 +539,7 @@ $(function() {
                 return OctoPrintClient.createRejectedDeferred();
             }
 
-            if (value < 0 || value > 999) return OctoPrintClient.createRejectedDeferred();
+            if (value < 0 || value > 300) return OctoPrintClient.createRejectedDeferred();
 
             var onSuccess = function() {
                 item.target(value);

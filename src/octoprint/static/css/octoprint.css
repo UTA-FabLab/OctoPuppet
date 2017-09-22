@@ -2363,6 +2363,7 @@ _:future,
   overflow-x: hidden;
   text-overflow: ellipsis;
   width: inherit;
+  color: #222;
 }
 .input-append .btn-group:first-child .btn:first-child,
 .input-prepend .btn-group:first-child .btn:first-child {
@@ -2384,6 +2385,7 @@ _:future,
 .input-prepend.input-block-level .add-on {
   display: table-cell;
   width: 1%;
+  color: #222;
   /* remove this if you want default bootstrap button width */
 }
 .input-append.input-block-level > input,

@@ -1778,6 +1778,7 @@ select:focus:invalid:focus {
 .input-append .btn,
 .input-append .btn-group {
   margin-left: -1px;
+  color: #aaa;
 }
 
 .input-append .add-on:last-child,

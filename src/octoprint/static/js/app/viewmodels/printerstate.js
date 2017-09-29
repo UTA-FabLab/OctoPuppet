@@ -298,7 +298,7 @@ $(function() {
 
 			$.ajax({
 				url: "FLUD_BASE/materials.php",
-        		header: {"Authorization": "FLUD_KEY"},
+        		headers: {"Authorization": "FLUD_KEY"},
 				type:"POST",
 				dataType: "json",
 				contentType: "application/json; charset=UTF-8",
@@ -325,7 +325,7 @@ $(function() {
 
 			$.ajax({
 				url: "FLUD_BASE/purpose.php",
-        		header: {"Authorization": "FLUD_KEY"},
+                headers: {"Authorization": "FLUD_KEY"},
 				dataType: 'json',
 				type: "GET",
 				success: function(data)
@@ -389,7 +389,7 @@ $(function() {
 							dataType: "json",
 							contentType: "application/json; charset=UTF-8",
 							url:"FLUD_BASE/flud.php",
-              				header: {"Authorization": "FLUD_KEY"},
+              				headers: {"Authorization": "FLUD_KEY"},
 							data:JSON.stringify(postBody),
 							success: function(success_data){
 								console.log("got success back");

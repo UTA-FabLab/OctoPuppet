@@ -318,7 +318,7 @@ $(function() {
 						option.textContent = desc;
 						f_selector.appendChild(option);
 					};
-
+          $("#sel_filament").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Material</option>");
 				}
 			});
 
@@ -342,6 +342,7 @@ $(function() {
 						option.textContent = p_desc;
 						p_selector.appendChild(option);
 					};
+          $("#sel_purpose").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Purpose</option>");
 				}
 			});
 
@@ -375,9 +376,7 @@ $(function() {
 						postBody.p_id = document.getElementById("sel_purpose").options[document.getElementById("sel_purpose").selectedIndex].value;
 
 						postBody.filename = self.filename();
-
 						postBody.est_filament_used = api_file_data.est_flmnt_vol;
-
 						postBody.est_build_time = api_file_data.est_build_time;
 
 						console.log(JSON.stringify(postBody));

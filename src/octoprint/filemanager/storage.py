@@ -701,13 +701,16 @@ class LocalFileStorage(StorageInterface):
 				build_time_float = float(float1)
 				h, m = divmod(build_time_float, 60)
 				s = math.ceil((build_time_float-int(build_time_float))*60)
-				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2) 
+				if s == 60:
+					s = 0
+					m = m+1
+				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2)
 				metadata["est_build_time"] = build_time_str
 		else:
 			pass
 			#metadata[name]["est_build_time"] = "No build time found in gcode"
-			
-			
+
+
 		# if kisslicer materials used estimates were found, capture and store
 		if build_mat_used:
 			re1='.*?'	# Non-greedy match on filler

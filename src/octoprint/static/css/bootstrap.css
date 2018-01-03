@@ -1131,8 +1131,8 @@ input[type="search"],
 input[type="tel"],
 input[type="color"],
 .uneditable-input {
-  background-color: #fff;
-  border: 1px solid #bbbbbb;
+  background-color: #282828;
+  border: 1px solid #444;
   -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
      -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
           box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
@@ -1199,8 +1199,8 @@ input[type="file"] {
 
 select {
   width: 220px;
-  background-color: #cccccc;
-  border: 1px solid #bbbbbb;
+  background-color: #282828;
+  border: 1px solid #444;
 }
 
 select[multiple],
@@ -1221,7 +1221,7 @@ input[type="checkbox"]:focus {
 .uneditable-textarea {
   color: #adafae;
   cursor: not-allowed;
-  background-color: #c9c9c9;
+  background-color: #282828;
   border-color: #bbbbbb;
   -webkit-box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.025);
      -moz-box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.025);
@@ -1723,9 +1723,8 @@ select:focus:invalid:focus {
   font-weight: normal;
   line-height: 20px;
   text-align: center;
-  text-shadow: 0 1px 0 #ffffff;
-  background-color: #eeeeee;
-  border: 1px solid #ccc;
+  background-color: #282828;
+  border: 1px solid #444;
 }
 
 .input-append .add-on,
@@ -1778,7 +1777,7 @@ select:focus:invalid:focus {
 .input-append .btn,
 .input-append .btn-group {
   margin-left: -1px;
-  color: #aaa;
+  color: #ddd;
 }
 
 .input-append .add-on:last-child,
@@ -6771,7 +6770,7 @@ input[type="search"],
 input[type="tel"],
 input[type="color"],
 .uneditable-input {
-  color: #222222;
+  color: #ddd;
 }
 
 input[disabled],

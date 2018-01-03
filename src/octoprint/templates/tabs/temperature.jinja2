@@ -27,7 +27,7 @@
                     <button type="button" class="btn btn-info btn-input-dec" data-bind="click: $root.decrementTarget, enable: $root.isOperational() && $root.loginState.isUser()" title="{{ _('Fine adjust: -10°C') }}"><i class="fa fa-minus fa-inverse"></i></button>
                     <input type="number" min="0" max="300" class="input-mini input-nospin" style="width: 30px" data-bind="attr: {placeholder: cleanTemperature(target())}, value: newTarget, valueUpdate: 'input', enable: $root.isOperational() && $root.loginState.isUser(), event: { focus: function(d, e) {$root.handleFocus(e, 'target', $data) } }">
                     <span class="add-on">&deg;C</span>
-                    <button type="button" class="btn btn-input-inc" data-bind="click: $root.incrementTarget, enable: $root.isOperational() && $root.loginState.isUser()" title="{{ _('Fine adjust: +1°C') }}"><i class="fa fa-plus"></i></button>
+                    <button type="button" class="btn btn-info btn-input-inc" data-bind="click: $root.incrementTarget, enable: $root.isOperational() && $root.loginState.isUser()" title="{{ _('Fine adjust: +10°C') }}"><i class="fa fa-plus fa-inverse"></i></button>
                 </div>
                 <div class="btn-group">
 

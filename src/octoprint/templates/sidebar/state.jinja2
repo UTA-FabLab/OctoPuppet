@@ -28,39 +28,43 @@
 <script type="text/javascript">
 function forcecard() {
 	//to make sure the entry happened from swipe card we check the time for populating text
-    if (document.getElementById('studentId').value.length == 1 || document.getElementById('studentId2').value.length == 1) {
-        startdatetime = new Date();
-    }
-	// time at tenth character
-    else if (document.getElementById('studentId').value.length == 5 || document.getElementById('studentId2').value.length == 5) {
-        enddatetime = new Date();
-        var difference_ms = enddatetime - startdatetime;
-    }
-    if (difference_ms > 100) {
-        document.getElementById('studentId').value="";
-        document.getElementById('studentId2').value="";
-		alert("Please swipe your MavID. Contact a FabLab employee for assistance.");
-        return false;
-    }
+  if (document.getElementById('studentId').value.length == 1 || document.getElementById('studentId2').value.length == 1) {
+    startdatetime = new Date();
+  }
+	// time at nth character
+  else if (document.getElementById('studentId').value.length == 5 || document.getElementById('studentId2').value.length == 5) {
+    enddatetime = new Date();
+    var difference_ms = enddatetime - startdatetime;
+  }
+  if (difference_ms > 100) {
+    document.getElementById('studentId').value="";
+    document.getElementById('studentId2').value="";
+		//alert("Please swipe your MavID. Contact a FabLab employee for assistance.");
+    document.getElementById("cardW").style.visibility = "visible";
+    return false;
+  }
 }
 
 function check_id_valid(){
-	console.log("running template based ID check");
+//	console.log("running template based ID check");
 	var modal_ok_button = document.getElementById("studentIdVerification");
 	var modal_kill_button = document.getElementById("studentIdVerification2");
 
-  if (  document.getElementById('studentId2').value.length == 10 && document.getElementById('cancelIdModal').className == "modal fade in" ) {
+  if (document.getElementById('studentId2').value.length == 10 && document.getElementById('cancelIdModal').className == "modal fade in" ) {
 		modal_kill_button.removeAttribute("disabled");
-
   }else if( document.getElementById('studentId').value.length == 10 && document.getElementById('studentIdModal').className == "modal large fade in" ){
     modal_ok_button.removeAttribute("disabled");
-
-  }
-	else {
+  }else {
 		modal_ok_button.setAttribute("disabled", "disabled");
 		modal_kill_button.setAttribute("disabled", "disabled");
 	}
 
+  if (document.getElementById("sel_filament").options[document.getElementById("sel_filament").selectedIndex].value > 0 && document.getElementById("sel_purpose").options[document.getElementById("sel_purpose").selectedIndex].value > 0) {
+		modal_ok_button.removeAttribute("disabled");
+  }
+	else {
+		modal_ok_button.setAttribute("disabled", "disabled");
+  }
 }
 
 </script>
@@ -77,16 +81,20 @@ function check_id_valid(){
           <div class="span8">
             <p style="text-align:justify">To ensure that the UTA FabLab is an ethical learning environment, only upload files that meet the guidelines set by the UTA Fablab and the UTA Libraries. The UTA Libraries reserve the right to refuse/destroy any fabrication requests which do not meet our guidelines. Please visit http://fablab.uta.edu/policy for more information. By swiping your Mav Express Card and pressing the "Agree" button, you agree to the guidelines set by the UTA FabLab.</p>
 		        <div><h4>Important: Make sure that the filament is loaded and heaters are online before pressing the "Agree" button.</h4></div>
-            <div>Patron ID:
-                <input style="width: 366px;" type="text" maxlength="10" id="studentId" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+            <div class="span8">Patron ID:</div>
+            <div class="span8 inline">
+                <input class="span4" type="text" maxlength="10" id="studentId" placeholder="Patron ID" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+                <small class="help-inline" id="cardW" style="color: #ff0000;visibility: hidden;">Swipe your MavID using the card reader</small>
             </div>
-            <div style="float: left;">Select Filament:
-			          <select id="sel_filament" class="span5">
+            <div class="span8" style="float: left;">Select Filament:</div>
+            <div class="span8 inline">
+			          <select id="sel_filament" class="span4" onchange="check_id_valid()">
 				        <option id="sel_filament_default_option" value="" disabled selected>Loading...</option>
 			          </select>
-		        </div>
-		        <div style="float: left;">Purpose of visit:
-			           <select id="sel_purpose" class="span5">
+            </div>
+		        <div class="span4" style="float: left;">Purpose of visit:</div>
+            <div class="span8 inline">
+			           <select id="sel_purpose" class="span4" onchange="check_id_valid()">
 				         <option id="sel_purpose_default_option" value="" disabled selected>Loading...</option>
 			           </select>
 		        </div>

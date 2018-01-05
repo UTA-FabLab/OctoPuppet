@@ -702,8 +702,7 @@ class LocalFileStorage(StorageInterface):
 				h, m = divmod(build_time_float, 60)
 				s = math.ceil((build_time_float-int(build_time_float))*60)
 				if s == 60:
-					s = 0
-					m = m+1
+					s = 59
 				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2)
 				metadata["est_build_time"] = build_time_str
 		else:

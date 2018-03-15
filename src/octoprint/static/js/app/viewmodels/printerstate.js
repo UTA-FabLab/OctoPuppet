@@ -336,7 +336,7 @@ $(function() {
 					p_selector.options.length = 0;
 
 					for ( var i = 0; i < data.length; i++) {
-						var p_item = data[i], p_id = p_item.purp_id, p_desc = p_item.purpose
+						var p_item = data[i], p_id = p_item.p_id, p_desc = p_item.purpose
 						var option = document.createElement("option");
 						option.value = p_id;
 						option.textContent = p_desc;

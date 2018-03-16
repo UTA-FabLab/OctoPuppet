@@ -703,11 +703,10 @@ class LocalFileStorage(StorageInterface):
 				if s == 60:
 					s = 59
 				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2)
-				metadata["est_build_time"] = build_time_str
+				self.remove_additional_metadata(name, "est_build_time")
+				self.set_additional_metadata(name, "est_build_time", build_time_str)
 		else:
 			pass
-			#metadata[name]["est_build_time"] = "No build time found in gcode"
-
 
 		# if kisslicer materials used estimates were found, capture and store
 		if build_mat_used:
@@ -719,13 +718,12 @@ class LocalFileStorage(StorageInterface):
 			rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
 			m = rg.search(build_mat_used)
 			if m:
-				float1=m.group(1)
-				float2=m.group(2)
-				metadata["est_flmnt_vol"] = float2
-				metadata["est_flmnt_len"] = float1
+				self.remove_additional_metadata(name, "est_flmnt_vol")
+				self.remove_additional_metadata(name, "est_flmnt_len")
+				self.set_additional_metadata(name, "est_flmnt_vol", m.group(2))
+				self.set_additional_metadata(name, "est_flmnt_len", m.group(1))
 		else:
 			pass
-			#metadata[name]["est_flmnt_vol"] = "No materials used data found in gcode"
 
 		# process any links that were also provided for adding to the file
 		if not links:

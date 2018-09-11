@@ -1,6 +1,8 @@
 $(function() {
     function PrinterStateViewModel(parameters) {
         var self = this;
+        var transactionid;
+        
 
         self.loginState = parameters[0];
         self.settings = parameters[1];
@@ -14,6 +16,7 @@ $(function() {
         self.isReady = ko.observable(undefined);
         self.isLoading = ko.observable(undefined);
         self.isSdReady = ko.observable(undefined);
+        //self.get_t_id= ko.observable(undefined);
 
         self.enablePrint = ko.pureComputed(function() {
             return self.isOperational() && self.isReady() && !self.isPrinting() && self.loginState.isUser() && self.filename() != undefined;
@@ -51,6 +54,7 @@ $(function() {
 
         self.titlePrintButton = ko.observable(self.TITLE_PRINT_BUTTON_UNPAUSED);
         self.titlePauseButton = ko.observable(self.TITLE_PAUSE_BUTTON_UNPAUSED);
+        //console.log(this.vrushali);
 
         self.estimatedPrintTimeString = ko.pureComputed(function() {
             if (self.lastPrintTime())
@@ -170,8 +174,11 @@ $(function() {
             url: API_BASEURL + "files/local/" + self.filename(),
             headers: { 'X-Api-Key': 'UTALab16' },
             success:function (api_file_data){
-              var file_data_t_id = JSON.stringify(api_file_data.trans_id)
+              var file_data_t_id = api_file_data.trans_id
+              console.log("*************Rainbows and Unicorns********************Trial to dislay the transaction id");
+              console.log(file_data_t_id);
               return file_data_t_id;
+
             },
             error: function(errMsg){
               console.log("No file is loaded.");
@@ -187,6 +194,7 @@ $(function() {
           } else {
             return gettext("---")
           }
+
         });
 
         self.fromCurrentData = function(data) {
@@ -292,6 +300,7 @@ $(function() {
 
         self.print = function() {
 			$("#studentIdModal").modal('show');
+
 			console.log("Showing student id modal");
 
 			var m_request_body = JSON.stringify({type: "device_id", device: "DEV_ID"});
@@ -306,9 +315,24 @@ $(function() {
 				contentType: "application/json; charset=UTF-8",
 				data: m_request_body,
 				success: function(data)
-				{
+				{                 
+                        
+                    //var fs = require("fs");
+//var fileContent = "hello";
+
+//fs.writeFile("/home/vrushali/Desktop/sample.txt", fileContent, (err) => {
+    //if (err) {
+        //console.error(err);
+        //return;
+    //};
+    //console.log("File has been created");
+//});
+					//var fs= "/home/vrushali/OctoPuppet/bypassDBData/materials.txt";
 					console.log("Got response from materials.php");
+					console.log("*********************************");
 					console.log(data);
+					//writeFile(fs, data);
+
 
 					var f_selector = document.getElementById("sel_filament");
 
@@ -322,7 +346,15 @@ $(function() {
 						f_selector.appendChild(option);
 					};
           $("#sel_filament").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Material</option>");
-				}
+				},
+                error: function(errMsg)
+                {
+                    console.log(errMsg);
+                    //*******************************************AJAX CALL TO JSON FILE(MATERIAL.JSON)***************************************
+                    alert("SERVER IS DOWN");
+                    console.log("SERVER IS DOWN");                 
+ 
+                }
 			});
 
 			$.ajax({
@@ -332,11 +364,11 @@ $(function() {
 				type: "GET",
 				success: function(data)
 				{
-					console.log("Got response from purpose.php");
+                    console.log("Got response from purpose.php");
 					console.log(data);
 
 					var p_selector = document.getElementById("sel_purpose");
-
+    
 					p_selector.options.length = 0;
 
 					for ( var i = 0; i < data.length; i++) {
@@ -345,9 +377,21 @@ $(function() {
 						option.value = p_id;
 						option.textContent = p_desc;
 						p_selector.appendChild(option);
+                    
+
 					};
           $("#sel_purpose").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Purpose</option>");
-				}
+				//},
+                //error: function(errMsg)
+                //{
+                //    console.log(errMsg);
+                    //**********************************************AJAX CALL TO PURPOSE(JSON)******************************************
+                //    console.log("SERVER IS DOWN");
+                //    alert("YIKES");
+ 
+
+
+                }
 			});
 
 			console.log("sent AJAX requests for purpose and materials");
@@ -385,6 +429,7 @@ $(function() {
 
 						console.log(JSON.stringify(postBody));
 
+
 						$.ajax({
 							type:"POST",
 							dataType: "json",
@@ -395,9 +440,11 @@ $(function() {
 							success: function(success_data){
 								console.log("got success back");
 								console.log(success_data);
+								//console.log("**************************");
 								trans_response = success_data;
 								console.log("Transaction ID is:");
 								console.log(trans_response["trans_id"]);
+								//console.log("**************************");
 
 								$("#studentIdModal").modal('hide');
 
@@ -440,12 +487,13 @@ $(function() {
 								}
 
 							},
-							error: function(errMsg){
-								$("#studentIdModal").modal('hide');
-								console.log("Connection to flud.php errored out. Error details:");
-								console.log(errMsg);
-								alert("Timeout error. Please inform current supervisor.");
-								}
+							//error: function(errMsg){
+                            //    console.log("**************************");
+							//	$("#studentIdModal").modal('hide');
+							//	console.log("Connection to flud.php errored out. Error details:");
+							//	console.log(errMsg);
+							//	alert("Timeout error. Please inform current supervisor.");
+							//	}
 						});
 					}
 				});

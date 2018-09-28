@@ -312,21 +312,13 @@ $(function() {
         		headers: {"Authorization": "FLUD_KEY"},
 				type:"POST",
 				dataType: "json",
+				async: false,
 				contentType: "application/json; charset=UTF-8",
 				data: m_request_body,
 				success: function(data)
 				{                 
-                        
-                    //var fs = require("fs");
-//var fileContent = "hello";
+					result1= data;
 
-//fs.writeFile("/home/vrushali/Desktop/sample.txt", fileContent, (err) => {
-    //if (err) {
-        //console.error(err);
-        //return;
-    //};
-    //console.log("File has been created");
-//});
 					//var fs= "/home/vrushali/OctoPuppet/bypassDBData/materials.txt";
 					console.log("Got response from materials.php");
 					console.log("*********************************");
@@ -346,24 +338,58 @@ $(function() {
 						f_selector.appendChild(option);
 					};
           $("#sel_filament").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Material</option>");
+
+
+                //ajax call to run the python file to fetch data from materials.json
+                 $.ajax({
+                    url: "/home/vrushali/OctoPuppet/src/octoprint/server/api/manualmode.py",
+                    success: function(response) {
+                    console.log("FETCHED THE DATA FOR MATERIALS AND PURPOSE");
+                    }
+                    });  
 				},
                 error: function(errMsg)
                 {
                     console.log(errMsg);
                     //*******************************************AJAX CALL TO JSON FILE(MATERIAL.JSON)***************************************
                     alert("SERVER IS DOWN");
-                    console.log("SERVER IS DOWN");                 
+                    console.log("SERVER IS DOWN"); 
+                      $.ajax({
+                    url: "/home/vrushali/.octoprint/FabAppData/materials.json",
+                    type:"POST",
+                    dataType: "json",
+                    async: false,
+                    contentType: "application/json; charset=UTF-8",
+                    data: {},
+                    success: function(data) {
+                    console.log("FETCHED THE DATA FOR MATERIALS AND PURPOSE");
+                    consol.log(data);
+                    }
+                    });              
  
                 }
 			});
+			console.log("******************** materials",result1)
+ 			var myJsonMaterialsString = JSON.stringify(result1);
+
+
+ 			var url1 = 'data:text/json;charset=utf8,' + encodeURIComponent(myJsonMaterialsString);
+			window.open(url1, 'Download1');
+			window.focus();
+
+
+			
+
 
 			$.ajax({
 				url: "FLUD_BASE/purpose.php",
                 headers: {"Authorization": "FLUD_KEY"},
 				dataType: 'json',
+				async: false,
 				type: "GET",
 				success: function(data)
 				{
+					result2=data;
                     console.log("Got response from purpose.php");
 					console.log(data);
 
@@ -381,20 +407,45 @@ $(function() {
 
 					};
           $("#sel_purpose").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Purpose</option>");
-				//},
-                //error: function(errMsg)
-                //{
-                //    console.log(errMsg);
-                    //**********************************************AJAX CALL TO PURPOSE(JSON)******************************************
-                //    console.log("SERVER IS DOWN");
-                //    alert("YIKES");
- 
-
-
-                }
+				},
+                error: function(errMsg)
+                                    //*******************************************AJAX CALL TO JSON FILE(MATERIAL.JSON)***************************************
+                    {
+                    alert("SERVER IS DOWN");
+                    console.log("SERVER IS DOWN"); 
+                    $.ajax({
+                    url: "/home/vrushali/.octoprint/FabAppData/purpose.json",
+                    type:"POST",
+                    dataType: "json",
+                    async: false,
+                    contentType: "application/json; charset=UTF-8",
+                    data: {},
+                    success: function(data) {
+                    console.log("FETCHED THE DATA FOR MATERIALS AND PURPOSE");
+                    consol.log(data);
+                    }
+                    }); 
+                
 			});
+			console.log("************************ PURPOSE", result2)
 
 			console.log("sent AJAX requests for purpose and materials");
+
+
+			
+
+ 			var myJsonPurposeString = JSON.stringify(result2);
+
+
+ 			//file2.open("write"); // open file with write access
+ 			//file2.writeline(myJsonPurposeString);
+ 			//file2.close();
+
+
+ 			var url2 = 'data:text/json;charset=utf8,' + encodeURIComponent(myJsonPurposeString);
+			window.open(url2, 'Download2');
+			window.focus();
+
 
 			$("#studentIdModal").on('shown', function() {
 				$("#studentId").val('');
@@ -467,6 +518,7 @@ $(function() {
 											success: function(response){console.log("Successfully saved trasaction ID data");
 																		console.log(response);}
 										});
+										
 
 										console.log(self.filename());
 
@@ -499,6 +551,10 @@ $(function() {
 				});
 			});
         };
+
+
+//Function to convert the data received from ajax call to convert to csv
+
 
         self.onlyPause = function() {
             OctoPrint.job.pause();

@@ -1,8 +1,6 @@
 $(function() {
     function PrinterStateViewModel(parameters) {
         var self = this;
-        var transactionid;
-        
 
         self.loginState = parameters[0];
         self.settings = parameters[1];
@@ -16,7 +14,6 @@ $(function() {
         self.isReady = ko.observable(undefined);
         self.isLoading = ko.observable(undefined);
         self.isSdReady = ko.observable(undefined);
-        //self.get_t_id= ko.observable(undefined);
 
         self.enablePrint = ko.pureComputed(function() {
             return self.isOperational() && self.isReady() && !self.isPrinting() && self.loginState.isUser() && self.filename() != undefined;
@@ -54,7 +51,6 @@ $(function() {
 
         self.titlePrintButton = ko.observable(self.TITLE_PRINT_BUTTON_UNPAUSED);
         self.titlePauseButton = ko.observable(self.TITLE_PAUSE_BUTTON_UNPAUSED);
-        //console.log(this.vrushali);
 
         self.estimatedPrintTimeString = ko.pureComputed(function() {
             if (self.lastPrintTime())
@@ -174,11 +170,8 @@ $(function() {
             url: API_BASEURL + "files/local/" + self.filename(),
             headers: { 'X-Api-Key': 'UTALab16' },
             success:function (api_file_data){
-              var file_data_t_id = api_file_data.trans_id
-              console.log("*************Rainbows and Unicorns********************Trial to dislay the transaction id");
-              console.log(file_data_t_id);
+              var file_data_t_id = JSON.stringify(api_file_data.trans_id)
               return file_data_t_id;
-
             },
             error: function(errMsg){
               console.log("No file is loaded.");
@@ -194,7 +187,6 @@ $(function() {
           } else {
             return gettext("---")
           }
-
         });
 
         self.fromCurrentData = function(data) {
@@ -300,7 +292,6 @@ $(function() {
 
         self.print = function() {
 			$("#studentIdModal").modal('show');
-
 			console.log("Showing student id modal");
 
 			var m_request_body = JSON.stringify({type: "device_id", device: "DEV_ID"});
@@ -312,19 +303,12 @@ $(function() {
         		headers: {"Authorization": "FLUD_KEY"},
 				type:"POST",
 				dataType: "json",
-				async: false,
 				contentType: "application/json; charset=UTF-8",
 				data: m_request_body,
 				success: function(data)
-				{                 
-					result1= data;
-
-					//var fs= "/home/vrushali/OctoPuppet/bypassDBData/materials.txt";
+				{
 					console.log("Got response from materials.php");
-					console.log("*********************************");
 					console.log(data);
-					//writeFile(fs, data);
-
 
 					var f_selector = document.getElementById("sel_filament");
 
@@ -340,61 +324,40 @@ $(function() {
           $("#sel_filament").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Material</option>");
 
 
-                //ajax call to run the python file to fetch data from materials.json
-                 $.ajax({
-                    url: "/home/vrushali/OctoPuppet/src/octoprint/server/api/manualmode.py",
-                    success: function(response) {
-                    console.log("FETCHED THE DATA FOR MATERIALS AND PURPOSE");
-                    }
-                    });  
-				},
-                error: function(errMsg)
-                {
-                    console.log(errMsg);
-                    //*******************************************AJAX CALL TO JSON FILE(MATERIAL.JSON)***************************************
-                    alert("SERVER IS DOWN");
-                    console.log("SERVER IS DOWN"); 
-                      $.ajax({
-                    url: "/home/vrushali/.octoprint/FabAppData/materials.json",
-                    type:"POST",
+                $.ajax({ //opening ajax call for manual mode
+                   // url: "/home/vrushali/OctoPuppet/manualmode.py",
+                    url: API_BASEURL + "manualmodefeature",
+                    type:"GET",
                     dataType: "json",
-                    async: false,
                     contentType: "application/json; charset=UTF-8",
-                    data: {},
-                    success: function(data) {
+                    headers: { 'X-Api-Key' : 'UTAlab16'},
+                    success: function(response) {// opening success
+                    //result1=response;
+                    console.log(response);
                     console.log("FETCHED THE DATA FOR MATERIALS AND PURPOSE");
-                    consol.log(data);
-                    }
-                    });              
- 
-                }
+                    console.log("******************** materials",result1)
+                    }, //closing success
+                    error : function(errMsg){ //opening error
+                        console.log("ERROR calling the python script");
+                        alert("Failed to run the python script");
+                    } //closing error
+                    }); //closing ajax call for manual mode
+               
+				}
 			});
-			console.log("******************** materials",result1)
- 			var myJsonMaterialsString = JSON.stringify(result1);
-
-
- 			var url1 = 'data:text/json;charset=utf8,' + encodeURIComponent(myJsonMaterialsString);
-			window.open(url1, 'Download1');
-			window.focus();
-
-
-			
-
 
 			$.ajax({
 				url: "FLUD_BASE/purpose.php",
-                headers: {"Authorization": "FLUD_KEY"},
+                headers:{"Authorization": "FLUD_KEY"},
 				dataType: 'json',
-				async: false,
 				type: "GET",
 				success: function(data)
 				{
-					result2=data;
-                    console.log("Got response from purpose.php");
+					console.log("Got response from purpose.php");
 					console.log(data);
 
 					var p_selector = document.getElementById("sel_purpose");
-    
+
 					p_selector.options.length = 0;
 
 					for ( var i = 0; i < data.length; i++) {
@@ -403,49 +366,12 @@ $(function() {
 						option.value = p_id;
 						option.textContent = p_desc;
 						p_selector.appendChild(option);
-                    
-
 					};
           $("#sel_purpose").prepend("<option value='-1' hidden='hidden' selected='selected'>Select Purpose</option>");
-				},
-                error: function(errMsg)
-                                    //*******************************************AJAX CALL TO JSON FILE(MATERIAL.JSON)***************************************
-                    {
-                    alert("SERVER IS DOWN");
-                    console.log("SERVER IS DOWN"); 
-                    $.ajax({
-                    url: "/home/vrushali/.octoprint/FabAppData/purpose.json",
-                    type:"POST",
-                    dataType: "json",
-                    async: false,
-                    contentType: "application/json; charset=UTF-8",
-                    data: {},
-                    success: function(data) {
-                    console.log("FETCHED THE DATA FOR MATERIALS AND PURPOSE");
-                    consol.log(data);
-                    }
-                    }); 
-                
+				}
 			});
-			console.log("************************ PURPOSE", result2)
 
 			console.log("sent AJAX requests for purpose and materials");
-
-
-			
-
- 			var myJsonPurposeString = JSON.stringify(result2);
-
-
- 			//file2.open("write"); // open file with write access
- 			//file2.writeline(myJsonPurposeString);
- 			//file2.close();
-
-
- 			var url2 = 'data:text/json;charset=utf8,' + encodeURIComponent(myJsonPurposeString);
-			window.open(url2, 'Download2');
-			window.focus();
-
 
 			$("#studentIdModal").on('shown', function() {
 				$("#studentId").val('');
@@ -468,7 +394,7 @@ $(function() {
 					url: API_BASEURL + "files/local/" + self.filename(),
 					headers: { 'X-Api-Key': 'UTALab16' },
 					success:function (api_file_data){
-						var postBody = {type: "print", device_id: "DEV_ID"};
+						var postBody = {type: "device_id", device_id: "DEV_ID"};
 
 						postBody.uta_id = $("#studentId").val()
 						postBody.m_id = document.getElementById("sel_filament").options[document.getElementById("sel_filament").selectedIndex].value;
@@ -480,7 +406,6 @@ $(function() {
 
 						console.log(JSON.stringify(postBody));
 
-
 						$.ajax({
 							type:"POST",
 							dataType: "json",
@@ -491,11 +416,9 @@ $(function() {
 							success: function(success_data){
 								console.log("got success back");
 								console.log(success_data);
-								//console.log("**************************");
 								trans_response = success_data;
 								console.log("Transaction ID is:");
 								console.log(trans_response["trans_id"]);
-								//console.log("**************************");
 
 								$("#studentIdModal").modal('hide');
 
@@ -518,7 +441,6 @@ $(function() {
 											success: function(response){console.log("Successfully saved trasaction ID data");
 																		console.log(response);}
 										});
-										
 
 										console.log(self.filename());
 
@@ -539,22 +461,17 @@ $(function() {
 								}
 
 							},
-							//error: function(errMsg){
-                            //    console.log("**************************");
-							//	$("#studentIdModal").modal('hide');
-							//	console.log("Connection to flud.php errored out. Error details:");
-							//	console.log(errMsg);
-							//	alert("Timeout error. Please inform current supervisor.");
-							//	}
+							error: function(errMsg){
+								$("#studentIdModal").modal('hide');
+								console.log("Connection to flud.php errored out. Error details:");
+								console.log(errMsg);
+								alert("Timeout error. Please inform current supervisor.");
+								}
 						});
 					}
 				});
 			});
         };
-
-
-//Function to convert the data received from ajax call to convert to csv
-
 
         self.onlyPause = function() {
             OctoPrint.job.pause();
@@ -588,7 +505,7 @@ $(function() {
                 }
             });
         };
-    }
+}
 
     OCTOPRINT_VIEWMODELS.push([
         PrinterStateViewModel,

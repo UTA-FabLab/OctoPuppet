@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import re
+import math
 import pylru
 import copy
 
@@ -756,6 +757,17 @@ class LocalFileStorage(StorageInterface):
 		if os.path.exists(file_path) and not allow_overwrite:
 			raise StorageError("{name} does already exist in {path} and overwriting is prohibited".format(**locals()), code=StorageError.ALREADY_EXISTS)
 
+		# search file for kisslicer analysis lines
+		try:
+			for line in file_object.stream():
+				if 'Estimated Build Time:' in line:
+					build_time = line
+				if 'Ext 1' in line:
+					build_mat_used = line
+		except Exception as e:
+			build_time = "errored during build time search"
+			raise e
+
 		# make sure folders exist
 		if not os.path.exists(path):
 			# TODO persist display names of path segments!
@@ -772,6 +784,43 @@ class LocalFileStorage(StorageInterface):
 			# hash changed -> throw away old metadata
 			metadata = dict(hash=file_hash)
 			metadata_dirty = True
+
+		# if kisslicer build time estimate was found, convert to a mysql time compatible unit and store
+		if build_time:
+			re1='.*?'	# Non-greedy match on filler
+			re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+
+			rg = re.compile(re1+re2,re.IGNORECASE|re.DOTALL)
+			m = rg.search(build_time)
+			if m:
+				float1=m.group(1)
+				build_time_float = float(float1)
+				h, m = divmod(build_time_float, 60)
+				s = math.ceil((build_time_float-int(build_time_float))*60)
+				if s == 60:
+					s = 59
+				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2)
+				self.remove_additional_metadata(name, "est_build_time")
+				self.set_additional_metadata(name, "est_build_time", build_time_str)
+		else:
+			pass
+
+		# if kisslicer materials used estimates were found, capture and store
+		if build_mat_used:
+			re1='.*?'	# Non-greedy match on filler
+			re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+			re3='.*?'	# Non-greedy match on filler
+			re4='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 2
+
+			rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
+			m = rg.search(build_mat_used)
+			if m:
+				self.remove_additional_metadata(name, "est_flmnt_vol")
+				self.remove_additional_metadata(name, "est_flmnt_len")
+				self.set_additional_metadata(name, "est_flmnt_vol", m.group(2))
+				self.set_additional_metadata(name, "est_flmnt_len", m.group(1))
+		else:
+			pass
 
 		if not "display" in metadata and display_name != name:
 			# display name is not the same as file name -> store in metadata

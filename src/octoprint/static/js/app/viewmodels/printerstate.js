@@ -1,7 +1,8 @@
 $(function() {
     function PrinterStateViewModel(parameters) {
         var self = this;
-
+        var prevPaused;
+        var paused;
         self.loginState = parameters[0];
         self.settings = parameters[1];
 
@@ -45,6 +46,7 @@ $(function() {
         self.filament = ko.observableArray([]);
         self.estimatedPrintTime = ko.observable(undefined);
         self.lastPrintTime = ko.observable(undefined);
+        self.transId = ko.observable(undefined);
 
         self.currentHeight = ko.observable(undefined);
 
@@ -180,6 +182,15 @@ $(function() {
             }
         });
 
+            self.transIdString = ko.pureComputed(function () {
+            console.log("prestring:", self.transId())
+            if (self.transId() == undefined) {
+                return "-";
+            } else {
+                return self.transId();
+            }
+        });
+
         self.userString = ko.pureComputed(function() {
             var user = self.user();
             if (!CONFIG_ACCESS_CONTROL || user === "_dummy") {
@@ -285,6 +296,7 @@ $(function() {
             self.printTime(data.printTime);
             self.printTimeLeft(data.printTimeLeft);
             self.printTimeLeftOrigin(data.printTimeLeftOrigin);
+            self.transId(data.transId);
         };
 
         self._processZData = function(data) {
@@ -301,17 +313,8 @@ $(function() {
             self.busyFiles(busyFiles);
         };
 
-        self.print = function() {
-            if (self.isPaused()) {
-                showConfirmationDialog({
-                    message: gettext("This will restart the print job from the beginning."),
-                    onproceed: function() {
-                        OctoPrint.job.restart();
-                    }
-                });
-            } else {
-                OctoPrint.job.start();
-            }
+        self.print = function () {
+            transid = checkStatus(self.filename(), paused);
         };
 
         self.onlyPause = function() {
@@ -327,19 +330,23 @@ $(function() {
         };
 
         self.cancel = function() {
-            if (!self.settings.feature_printCancelConfirmation()) {
-                OctoPrint.job.cancel();
-            } else {
-                showConfirmationDialog({
-                    message: gettext("This will cancel your print."),
-                    cancel: gettext("No"),
-                    proceed: gettext("Yes"),
-                    onproceed: function() {
-                        OctoPrint.job.cancel();
-                    },
-                    nofade: true
-                });
-            }
+            $("#cancelIdModal").modal('show');
+            console.log("Showing kill confirm modal");
+            $("#cancelIdModal").on('shown', function () {
+                $("#studentId1").val('');
+                $("#studentId2").val('');
+                $("#studentId2").focus();
+                $("#studentIdVerification2").attr("disabled", "disabled");
+            });
+
+            $("#studentIdVerification2").unbind("click").on("click", function () {
+                if ($("#studentId2").val().length != 10) {
+                    return false;
+                }
+                else {
+                    OctoPrint.job.cancel();
+                }
+            });
         };
     }
 

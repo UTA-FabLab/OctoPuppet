@@ -259,6 +259,7 @@ default_settings = {
 	},
 	"folder": {
 		"uploads": None,
+		"FabAppData": None,
 		"timelapse": None,
 		"timelapse_tmp": None,
 		"logs": None,
@@ -441,6 +442,11 @@ default_settings = {
 				"command_unknown": "Unknown command {}"
 			}
 		}
+	},
+	"fabapp": {
+		"device_id": None,
+		"flud_api_key": None,
+		"flud_url": None
 	}
 }
 """The default settings of the core application."""

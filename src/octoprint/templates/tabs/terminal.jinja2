@@ -4,7 +4,7 @@
     <div id="terminal-sendpanel" style="display: none;" data-bind="visible: loginState.isUser">
         <div class="input-block-level input-append">
             <input type="text" id="terminal-command" data-bind="value: command, event: { keyup: function(d,e) { return handleKeyUp(e); }, keydown: function(d,e) { return handleKeyDown(e); } }, enable: isOperational() && loginState.isUser()" autocomplete="off">
-            <a class="btn add-on" id="terminal-send" data-bind="click: sendCommand, enable: isOperational() && loginState.isUser()">{{ _('Send') }}</a>
+            <a class="btn btn-info add-on" id="terminal-send" data-bind="click: sendCommand, enable: isOperational() && loginState.isUser()">{{ _('Send') }}</a>
         </div>
     </div>
     <small class="pull-left" data-bind="visible: fancyFunctionality()">

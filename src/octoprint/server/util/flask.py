@@ -1473,6 +1473,7 @@ def collect_core_assets(preferred_stylesheet="css"):
 		"js/app/client/files.js",
 		"js/app/client/job.js",
 		"js/app/client/languages.js",
+		"js/app/client/octopuppet.js",
 		"js/app/client/printer.js",
 		"js/app/client/printerprofiles.js",
 		"js/app/client/settings.js",

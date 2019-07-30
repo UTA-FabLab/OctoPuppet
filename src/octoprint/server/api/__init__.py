@@ -41,6 +41,7 @@ from . import slicing as api_slicing
 from . import printer_profiles as api_printer_profiles
 from . import languages as api_languages
 from . import system as api_system
+from . import offline as api_offline
 
 
 VERSION = "0.1"

@@ -10,4 +10,4 @@
 <label class="checkbox">
     <input type="checkbox" id="connection_autoconnect" data-bind="checked: settings.serial_autoconnect, css: {disabled: !isErrorOrClosed()}, enable: isErrorOrClosed()"> {{ _('Auto-connect on server startup') }}
 </label>
-<button class="btn btn-block" id="printer_connect" data-test-id="connection-connect" data-bind="click: connect, text: buttonText">{{ _('Connect') }}</button>
+<button class="btn btn-primary" id="printer_connect" data-test-id="connection-connect" data-bind="click: connect, text: buttonText">{{ _('Connect') }}</button>

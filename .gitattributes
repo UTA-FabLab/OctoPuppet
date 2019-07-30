@@ -8,3 +8,6 @@ src/octoprint/static/less/variables.less linguist-vendored
 versioneer.py linguist-vendored
 
 docs/* linguist-documentation
+
+* text=auto
+

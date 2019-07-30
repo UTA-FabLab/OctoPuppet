@@ -136,7 +136,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			                    filepos=None,
 			                    printTime=None,
 			                    printTimeLeft=None,
-			                    printTimeOrigin=None),
+			                    printTimeOrigin=None,
+			                    transId=None),
 			current_z=None,
 			offsets=self._dict()
 		)
@@ -525,6 +526,26 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		self._updateProgressData()
 		self._setCurrentZ(None)
 
+	def get_transId(self):
+		filename = self._selectedFile["filename"]
+		if self._comm is None:
+			return None
+
+		with self._selectedFileMutex:
+			if filename is not None:
+				path_on_disk = self._fileManager.path_on_disk(FileDestinations.LOCAL, filename)
+				try:
+					fileData = self._fileManager.get_metadata(FileDestinations.LOCAL, path_on_disk)
+				except:
+					fileData = None
+				if fileData is not None:
+					if "trans_id" in fileData:
+						transId = fileData["trans_id"]
+					else:
+						transId = None
+				
+		return transId
+
 	def get_file_position(self):
 		if self._comm is None:
 			return None
@@ -550,7 +571,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		self._fileManager.delete_recovery_data()
 
 		self._lastProgressReport = None
-		self._updateProgressData()
+		self._updateProgressData(transId=self.get_transId())
 		self._setCurrentZ(None)
 		self._comm.startPrint(pos=pos,
 		                      user=user,
@@ -834,24 +855,27 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		self._messages.append(message)
 		self._stateMonitor.add_message(message)
 
-	def _updateProgressData(self, completion=None, filepos=None, printTime=None, printTimeLeft=None, printTimeLeftOrigin=None):
+	def _updateProgressData(self, completion=None, filepos=None, printTime=None, printTimeLeft=None, printTimeLeftOrigin=None, transId=None):
 		self._stateMonitor.set_progress(self._dict(completion=int(completion * 100) if completion is not None else None,
 		                                           filepos=filepos,
 		                                           printTime=int(printTime) if printTime is not None else None,
 		                                           printTimeLeft=int(printTimeLeft) if printTimeLeft is not None else None,
-		                                           printTimeLeftOrigin=printTimeLeftOrigin))
+		                                           printTimeLeftOrigin=printTimeLeftOrigin,
+		                                           transId=transId))
 
 	def _updateProgressDataCallback(self):
 		if self._comm is None:
 			progress = None
 			filepos = None
 			printTime = None
-			cleanedPrintTime = None
+			cleanedPrintTime = None,
+			transId = None
 		else:
 			progress = self._comm.getPrintProgress()
 			filepos = self._comm.getPrintFilepos()
 			printTime = self._comm.getPrintTime()
 			cleanedPrintTime = self._comm.getCleanedPrintTime()
+			transId = self.get_transId()
 
 		printTimeLeft = printTimeLeftOrigin = None
 		estimator = self._estimator
@@ -889,7 +913,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		                  filepos=filepos,
 		                  printTime=int(printTime) if printTime is not None else None,
 		                  printTimeLeft=int(printTimeLeft) if printTimeLeft is not None else None,
-		                  printTimeLeftOrigin=printTimeLeftOrigin)
+		                  printTimeLeftOrigin=printTimeLeftOrigin,
+		                  transId=transId)
 
 	def _addTemperatureData(self, tools=None, bed=None, chamber=None, custom=None):
 		if tools is None:
@@ -961,7 +986,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 				                                           averagePrintTime=None,
 				                                           lastPrintTime=None,
 				                                           filament=None,
-				                                           user=None))
+				                                           user=None,
+				                                           transId=None))
 				return
 
 			estimatedPrintTime = None
@@ -970,6 +996,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			date = None
 			filament = None
 			display_name = name_in_storage
+			transId = None
 			if path_on_disk:
 				# Use a string for mtime because it could be float and the
 				# javascript needs to exact match
@@ -995,6 +1022,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 							averagePrintTime = fileData["statistics"]["averagePrintTime"][printer_profile]
 						if "lastPrintTime" in fileData["statistics"] and printer_profile in fileData["statistics"]["lastPrintTime"]:
 							lastPrintTime = fileData["statistics"]["lastPrintTime"][printer_profile]
+					if "trans_id" in fileData:
+						transId = fileData["trans_id"]
 
 					if averagePrintTime is not None:
 						self._selectedFile["estimatedPrintTime"] = averagePrintTime
@@ -1014,7 +1043,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			                                           averagePrintTime=averagePrintTime,
 			                                           lastPrintTime=lastPrintTime,
 			                                           filament=filament,
-			                                           user=user))
+			                                           user=user,
+			                                           transId=transId))
 
 	def _updateJobUser(self, user):
 		with self._selectedFileMutex:
@@ -1027,7 +1057,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 				                                           averagePrintTime=job_data["averagePrintTime"],
 				                                           lastPrintTime=job_data["lastPrintTime"],
 				                                           filament=job_data["filament"],
-				                                           user=user))
+				                                           user=user,
+				                                           transId=transId))
 
 	def _sendInitialStateUpdate(self, callback):
 		try:
@@ -1214,7 +1245,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			self._updateProgressData(completion=1.0,
 			                         filepos=payload["size"],
 			                         printTime=payload["time"],
-			                         printTimeLeft=0)
+			                         printTimeLeft=0,
+			                         transId=self.get_transId())
 			self._stateMonitor.set_state(self._dict(text=self.get_state_string(), flags=self._getStateFlags()))
 
 			eventManager().fire(Events.PRINT_DONE, payload)
@@ -1325,7 +1357,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		self._sdStreaming = True
 
 		self._setJobData(remote_filename, filesize, True, user=user)
-		self._updateProgressData(completion=0.0, filepos=0, printTime=0)
+		self._updateProgressData(completion=0.0, filepos=0, printTime=0, transId=None)
 		self._stateMonitor.set_state(self._dict(text=self.get_state_string(), flags=self._getStateFlags()))
 
 	def on_comm_file_transfer_done(self, local_filename, remote_filename, elapsed, failed=False):

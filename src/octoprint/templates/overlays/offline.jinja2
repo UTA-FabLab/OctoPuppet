@@ -2,13 +2,20 @@
     <div id="offline_overlay_background"></div>
     <div id="offline_overlay_wrapper">
         <div class="container">
-            <div class="hero-unit">
+          <div class="hero-unit">
+            <div class="row">
+              <div class="span7">
                 <h1 id="offline_overlay_title">{{ _('Server is offline') }}</h1>
                 <p id="offline_overlay_message"></p>
                 <p>
                     <a class="btn btn-primary btn-large" id="offline_overlay_reconnect">{{ _('Attempt to reconnect') }}</a>
                 </p>
+              </div>
+              <div class="span3">
+                <img src="../static/img/octopuppet-sad.png">
+              </div>
             </div>
+          </div>
         </div>
     </div>
 </div>

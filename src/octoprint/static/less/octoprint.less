@@ -213,6 +213,7 @@ body {
 
 .octoprint-container {
   margin-top: 20px;
+  width: 1360px;
 
   /** OctoPrint application tabs */
 
@@ -238,7 +239,7 @@ body {
     margin-bottom: 20px;
     font-size: 21px;
     line-height: 40px;
-    color: #333;
+    color: #fff;
     border: 0;
     border-bottom: 1px solid #E5E5E5;
     font-weight: normal;
@@ -271,7 +272,7 @@ body {
 
     [class^="icon-"],
     [class*=" icon-"] {
-      color: #000;
+      color: #007399;
     }
   }
 }
@@ -722,7 +723,7 @@ ul.dropdown-menu li a {
       position: relative;
 
       &:hover {
-        background-color: #f5f5f5;
+        background-color: #181818;
       }
 
       .title {
@@ -768,7 +769,7 @@ ul.dropdown-menu li a {
       }
 
       &.highlight {
-        animation: highlightframes 2s;
+        animation: highlightframes 5s;
       }
     }
 
@@ -789,6 +790,7 @@ ul.dropdown-menu li a {
 
   .form-search {
     text-align: center;
+    margin-top: 5px;
     margin-bottom: 5px !important;
   }
 }
@@ -800,7 +802,7 @@ ul.dropdown-menu li a {
 
   .jog-panel {
     float: left;
-    margin-right: 19px;
+    margin-right: 30px;
   }
 
   h1 {
@@ -822,11 +824,10 @@ ul.dropdown-menu li a {
   }
 
   .box {
-    width: 30px;
-    height: 30px;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    padding-left: 8px;
+    width: 60px;
+    height: 60px;
+    margin-right: 20px;
+    margin-bottom: 20px;
   }
 
   .control-box {

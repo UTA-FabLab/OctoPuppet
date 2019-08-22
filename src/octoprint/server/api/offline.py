@@ -54,8 +54,7 @@ def FabAppStatus():
 		r = requests.get(faUrl + "index.php", timeout=1)
 		r.raise_for_status()
 	except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.HTTPError):
-		response = {"status": 500}
-		return jsonify(response)
+		return jsonify({"status": 500})
 	else:
 		return jsonify({"status": 200})
 
@@ -92,7 +91,10 @@ def tryFabAppOrGetLocal(filename):
 					f.write(json.dumps(json_list, sort_keys=True, indent=2))
 			else:
 				with open(fname) as oldjson:
-					json_list = json.load(oldjson)
+					try:
+						json_list = json.load(oldjson)
+					except:
+						json_list = []
 
 				json_list.append(faPayload)
 				with open(fname, mode='w') as f:

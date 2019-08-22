@@ -1011,14 +1011,7 @@ $(function() {
                 }
             });
 
-            $(".gcode_files").slimScroll({
-                height: "306px",
-                size: "5px",
-                distance: "0",
-                railVisible: true,
-                alwaysVisible: true,
-                scrollBy: "102px"
-            });
+            self.listElement = $("#files").find(".scroll-wrapper");
 
             self.moveDialog = $("#move_file_or_folder_dialog");
             self.addFolderDialog = $("#add_folder_dialog");

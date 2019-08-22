@@ -2053,9 +2053,11 @@ ul.dropdown-menu li a {
 #state_wrapper hr {
   margin: 5px 0;
 }
-/** GCODE file manager */
-#files .gcode_files {
-  padding-right: 7px;
+#files .gcode_files .scroll-wrapper {
+	overflow-x: hidden;
+	overflow-y: scroll;
+	height: 306px;
+	padding-right: 2px;
 }
 #files .gcode_files .entry {
   padding: 5px;

@@ -800,8 +800,8 @@ class LocalFileStorage(StorageInterface):
 				if s == 60:
 					s = 59
 				build_time_str = str(int(h)).zfill(2)  + ":" + str(int(m)).zfill(2)  + ":" + str(int(s)).zfill(2)
-				self.remove_additional_metadata(name, "est_build_time")
-				self.set_additional_metadata(name, "est_build_time", build_time_str)
+				metadata["est_build_time"] = build_time_str
+				metadata_dirty = True
 		else:
 			pass
 
@@ -815,10 +815,9 @@ class LocalFileStorage(StorageInterface):
 			rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
 			m = rg.search(build_mat_used)
 			if m:
-				self.remove_additional_metadata(name, "est_flmnt_vol")
-				self.remove_additional_metadata(name, "est_flmnt_len")
-				self.set_additional_metadata(name, "est_flmnt_vol", m.group(2))
-				self.set_additional_metadata(name, "est_flmnt_len", m.group(1))
+				metadata["est_flmnt_len"] = m.group(1)
+				metadata["est_flmnt_vol"] = m.group(2)
+				metadata_dirty = True
 		else:
 			pass
 

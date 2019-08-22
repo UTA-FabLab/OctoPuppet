@@ -345,6 +345,7 @@ $(function() {
                 }
                 else {
                     OctoPrint.job.cancel();
+                    endTransaction();
                 }
             });
         };

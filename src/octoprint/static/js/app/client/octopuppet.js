@@ -164,3 +164,19 @@ function OctoPuppet(file, paused) {
         });
     });
 }
+
+function endTransaction() {
+    postBody = { type:"update_end_time" }
+    $.ajax({
+        url: API_BASEURL + "FabAppData/end",
+        headers: { 'X-Api-Key': 'UTALab16' },
+        type: "POST",
+        contentType: "application/json; charset=UTF-8",
+        data: JSON.stringify(postBody),
+        dataType: "json",
+        success: function (success_data) {
+            console.log("Ticket ended succesfully on FabApp");
+        }
+            
+    });
+}

@@ -19,6 +19,7 @@ from flask import jsonify, request, url_for
 
 from octoprint.settings import settings
 from octoprint.server.api import api
+from octoprint.server import printer
 
 basedir = settings().getBaseFolder("FabAppData")
 faUrl = settings().get(["fabapp", "url"])
@@ -30,6 +31,12 @@ faHeaders = {
 	}
 
 faPayload = faDevice.copy()
+
+def endtransaction():
+	print("Ending Ticket")
+	faPayload['type'] = "update_end_time"
+	r = requests.request("POST", faUrl + "api/flud.php", json=faPayload, headers=faHeaders, timeout=0.5)
+	print(r.json())
 
 
 @api.route("/FabAppData", methods=["GET"])
@@ -96,6 +103,14 @@ def tryFabAppOrGetLocal(filename):
 			with open(fname, "r") as f:
 				return jsonify(json.load(f))
 
+@api.route("/FabAppData/endTrans", methods=["GET", "POST"])
+def endTrans():
+	try:
+		endtransaction()
+		return("yay")
+	except:
+		return("dang")
+
 @api.route("/FabAppData/sendOfflineData", methods=["GET", "POST"])
 def sendOfflineData():
 	trans_list=[]
@@ -108,11 +123,22 @@ def sendOfflineData():
 		transactions['off_trans_id'] = transactions['trans_id']
 		del transactions['trans_id']
 		try:
-			r = requests.request("POST", faUrl + "api/fl3ud.php", json=transactions, headers=faHeaders)
+			r = requests.request("POST", faUrl + "api/flud.php", json=transactions, headers=faHeaders)
 			response = r.json()
 			transactions['upload_status'] = response['off_status']
-		except:
-			print("Offline Transaction " + str(transactions['off_trans_id']) + " failed.")
+			currentData = printer.get_current_data()
+			if currentData["state"]["text"] == "Printing":
+				currentTrans = currentData["progress"]["transId"]
+				if transactions['off_trans_id'] != currentTrans:
+					endtransaction()
+				else:
+					pass
+			else:
+				endtransaction()
+
+			print("Offline Transaction " + str(transactions['off_trans_id']) + " pushed")
+		except Exception as e:
+			print("Offline Transaction " + str(transactions['off_trans_id']) + " push failed: " + str(e))
 
 		new_trans_list.append(transactions)
 	

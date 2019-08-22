@@ -10,7 +10,7 @@
 <span title="{{ _('Total print time so far') }}">{{ _('Print Time Elapsed') }}</span>: <strong data-bind="text: printTimeString"></strong><br>
 <span title="{{ _('Estimated time until the print job is done. This is only an estimate and accuracy depends heavily on various factors!') }}">{{ _('Print Time Left') }}</span>: <strong data-bind="text: printTimeLeftString, attr: {title: printTimeLeftExactString}"></strong> <span id="state_printtimeleft_popover" style="display: none" data-bind="visible: printTimeLeftOrigin, attr: {title: printTimeLeftOriginString}, css: printTimeLeftOriginClass">&#9679;</span><br>
 <span title="{{ _('Bytes printed vs total bytes of file') }}">{{ _('Printed') }}</span>: <strong data-bind="text: byteString"></strong><br>
-<span title="{{ _('Current Z Height') }}">{{ _('Layer') }}</span>: <strong data-bind="text: heightString"></strong><br>
+<span title="{{ _('Current Z Height') }}">{{ _('Current Height') }}</span>: <strong data-bind="text: heightString"></strong><br>
 
 
 <div class="progress progress-text-centered">
@@ -47,7 +47,6 @@ function forcecard() {
 }
 
 function check_id_valid(){
-//	console.log("running template based ID check");
 	var modal_ok_button = document.getElementById("studentIdVerification");
 	var modal_kill_button = document.getElementById("studentIdVerification2");
 
@@ -84,7 +83,7 @@ function check_id_valid(){
               <div><h4>Important: Make sure that the filament is loaded and heaters are online before pressing the "Agree" button.</h4></div>
             <div class="span8">Patron ID:</div>
             <div class="span8 inline">
-              <input class="span4" type="text" maxlength="10" id="studentId" placeholder="Patron ID"  onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
+              <input class="span4" type="text" maxlength="10" id="studentId" placeholder="Patron ID" onkeydown="forcecard()" onkeyup="check_id_valid()" onselectstart="return false" onpaste="return false;" onCopy="return false" onCut="return false" onDrag="return false" onDrop="return false" autocomplete=off />
               <small class="help-inline" id="cardW" style="color: #ff0000;visibility: hidden;">Swipe your MavID using the card reader</small>
             </div>
             <div class="span8" style="float: left;">Select Filament:</div>

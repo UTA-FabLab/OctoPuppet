@@ -64,7 +64,7 @@ $(function() {
             if (self.estimatedPrintTime())
                 return fmt(self.estimatedPrintTime());
             return "-";
-        }
+        };
         self.estimatedPrintTimeString = ko.pureComputed(function() {
             return estimatedPrintTimeStringHlpr(self.settings.appearance_fuzzyTimes() ? formatFuzzyPrintTime : formatDuration);
         });
@@ -97,7 +97,7 @@ $(function() {
             } else {
                 return fmt(self.printTimeLeft());
             }
-        }
+        };
         self.printTimeLeftString = ko.pureComputed(function() {
             return printTimeLeftStringHlpr(self.settings.appearance_fuzzyTimes() ? formatFuzzyPrintTime : formatDuration);
         });

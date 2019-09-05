@@ -253,6 +253,7 @@ default_settings = {
 		"keyboardControl": True,
 		"pollWatched": False,
 		"modelSizeDetection": True,
+		"printStartConfirmation": False,
 		"printCancelConfirmation": True,
 		"autoUppercaseBlacklist": ["M117", "M118"],
 		"g90InfluencesExtruder": False

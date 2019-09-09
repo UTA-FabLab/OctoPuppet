@@ -21,6 +21,7 @@ from builtins import range, bytes
 from octoprint.settings import settings
 
 from octoprint.util import atomic_write, to_bytes, deprecated, monotonic_time
+from octoprint.util import get_fully_qualified_classname as fqcn
 
 class UserManager(object):
 	valid_roles = ["user", "admin"]
@@ -86,7 +87,8 @@ class UserManager(object):
 			try:
 				callback("login", user)
 			except:
-				self._logger.exception("Error while calling login callback {!r}".format(callback))
+				self._logger.exception("Error while calling login callback {!r}".format(callback),
+				                       extra=dict(callback=fqcn(callback)))
 
 		return user
 
@@ -118,7 +120,8 @@ class UserManager(object):
 			try:
 				callback("logout", user)
 			except:
-				self._logger.exception("Error while calling logout callback {!r}".format(callback))
+				self._logger.exception("Error while calling logout callback {!r}".format(callback),
+				                       extra=dict(callback=fqcn(callback)))
 
 	def _cleanup_sessions(self):
 		for session, user in self._session_users_by_session.items():

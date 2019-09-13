@@ -1,6 +1,6 @@
 <form class="form-search" data-bind="submit: performSearch">
     <div class="search-query-with-clear" data-bind="css: {'active-clear': searchQuery}">
-        <input type="search" class="input-block search-query span4" data-bind="value: searchQuery, valueUpdate: 'input'" placeholder="{{ _('Search...') }}">
+        <input type="search" class="input-block search-query span4" data-bind="value: searchQuery, valueUpdate: 'input'" placeholder="{{ _('Search...')|edq }}">
         <span class="search-clear" data-bind="click: clearSearchQuery"><i class="fa fa-remove"></i></span>
     </div>
 </form>
@@ -21,10 +21,10 @@
         <div class="size">{{ _('Size') }}: <span data-bind="text: formatSize(size)"></span></div>
         <div class="additionalInfo hide" data-bind="html: $root.getAdditionalData($data)"></div>
         <div class="btn-group action-buttons">
-            <div class="btn btn-info btn-mini toggleAdditionalData" data-bind="click: function() { if ($root.enableAdditionalData($data)) { $root.toggleAdditionalData($data); } else { return; } }, css: { disabled: !$root.enableAdditionalData($data) }" title="{{ _('Additional data') }}"><i class="fa fa-chevron-down fa-inverse fa2"></i></div>
-            <a class="btn btn-info btn-mini" data-bind="attr: {href: $root.downloadLink($data)}, css: {disabled: !$root.downloadLink($data)}" title="{{ _('Download') }}"><i class="fa fa-download fa-inverse fa2"></i></a>
-            <div class="btn btn-danger btn-mini" style="padding-left: 7.5px; padding-right: 7.5px;"  data-bind="click: function(data, event) { if ($root.enableRemove($data)) { $root.removeFile($data, event); } else { return; } }, css: {disabled: !$root.enableRemove($data)}" title="{{ _('Remove') }}"><i class="fa fa-trash-o fa-inverse fa2"></i></div>
-            <div class="btn btn-success btn-mini" data-bind="click: function() { if ($root.enableSelect($data)) { $root.loadFile($data, false); } else { return; } }, css: {disabled: !$root.enableSelect($data)}" title="{{ _('Load') }}"><i class="fa fa-folder-open fa-inverse fa2"></i></div>
+            <div class="btn btn-info btn-mini toggleAdditionalData" data-bind="click: function() { if ($root.enableAdditionalData($data)) { $root.toggleAdditionalData($data); } else { return; } }, css: { disabled: !$root.enableAdditionalData($data) }" title="{{ _('Additional data')|edq }}"><i class="fa fa-chevron-down fa-inverse fa2"></i></div>
+            <a class="btn btn-info btn-mini" data-bind="attr: {href: $root.downloadLink($data)}, css: {disabled: !$root.downloadLink($data)}" title="{{ _('Download')|edq }}"><i class="fa fa-download fa-inverse fa2"></i></a>
+            <div class="btn btn-danger btn-mini" style="padding-left: 7.5px; padding-right: 7.5px;"  data-bind="click: function(data, event) { if ($root.enableRemove($data)) { $root.removeFile($data, event); } else { return; } }, css: {disabled: !$root.enableRemove($data)}" title="{{ _('Remove')|edq }}"><i class="fa fa-trash-o fa-inverse fa2"></i></div>
+            <div class="btn btn-success btn-mini" data-bind="click: function() { if ($root.enableSelect($data)) { $root.loadFile($data, false); } else { return; } }, css: {disabled: !$root.enableSelect($data)}" title="{{ _('Load')|edq }}"><i class="fa fa-folder-open fa-inverse fa2"></i></div>
         </div>
     </script>
 
@@ -34,9 +34,9 @@
         <div class="uploaded">{{ _('Uploaded') }}: <span data-bind="text: formatTimeAgo(date), attr: {title: formatDate(date)}"></span></div>
         <div class="size">{{ _('Size') }}: <span data-bind="text: formatSize(size)"></span></div>
         <div class="btn-group action-buttons">
-            <a class="btn btn-info btn-mini" data-bind="attr: {href: $root.downloadLink($data), css: {disabled: !$root.downloadLink($data)}}" title="{{ _('Download') }}"><i class="fa fa-download"></i></a>
-            <div class="btn btn-danger btn-mini" data-bind="click: function(data, event) { if ($root.enableRemove($data)) { $root.removeFile($data, event); } else { return; } }, css: {disabled: !$root.enableRemove($data)}" title="{{ _('Remove') }}"><i class="fa fa-trash-o fa-inverse fa2"></i></div>
-            <div class="btn btn-primary btn-mini"  data-bind="click: function() { if ($root.enableSlicing($data)) { $root.sliceFile($data); } else { return; } }, css: {disabled: !$root.enableSlicing($data)}" title="{{ _('Slice') }}"><i class="fa fa-magic"></i></div>
+            <a class="btn btn-info btn-mini" data-bind="attr: {href: $root.downloadLink($data), css: {disabled: !$root.downloadLink($data)}}" title="{{ _('Download')|edq }}"><i class="fa fa-download"></i></a>
+            <div class="btn btn-danger btn-mini" data-bind="click: function(data, event) { if ($root.enableRemove($data)) { $root.removeFile($data, event); } else { return; } }, css: {disabled: !$root.enableRemove($data)}" title="{{ _('Remove')|edq }}"><i class="fa fa-trash-o fa-inverse fa2"></i></div>
+            <div class="btn btn-primary btn-mini"  data-bind="click: function() { if ($root.enableSlicing($data)) { $root.sliceFile($data); } else { return; } }, css: {disabled: !$root.enableSlicing($data)}" title="{{ _('Slice')|edq }}"><i class="fa fa-magic"></i></div>
         </div>
     </script>
 

@@ -104,8 +104,9 @@ GCODE.gCodeReader = (function(){
         return elements[0];
     };
 
-    var purgeLayers = function(){
-        if(!model) return;
+    var purgeLayers = function(m){
+        if(!m) return;
+        var tmpModel = [];
 
         var purge;
         for(var i = 0; i < model.length; i++){
@@ -120,11 +121,12 @@ GCODE.gCodeReader = (function(){
                 }
             }
 
-            if (purge) {
-                model.splice(i, 1);
-                i--;
+            if (!purge) {
+                tmpModel.push(m[i]);
             }
         }
+
+        return tmpModel;
     };
 
 // ***** PUBLIC *******
@@ -177,7 +179,7 @@ GCODE.gCodeReader = (function(){
         },
 
         passDataToRenderer: function(){
-            var m = _.cloneDeep(model);
+            var m = model;
             if (gCodeOptions["sortLayers"]) m = sortLayers(m);
             if (gCodeOptions["purgeEmptyLayers"]) m = purgeLayers(m);
             prepareLinesIndex(m);

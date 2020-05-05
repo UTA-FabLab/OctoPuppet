@@ -294,7 +294,7 @@ $(function() {
 			$("#studentIdModal").modal('show');
 			console.log("Showing student id modal");
 
-			var m_request_body = JSON.stringify({type: "device_id", device: "DEV_ID"});
+			var m_request_body = JSON.stringify({type: "device_id", device_id: "DEV_ID"});
 
 			console.log(m_request_body);
 

@@ -4,6 +4,7 @@ $(function() {
 
         self.loginState = parameters[0];
         self.settings = parameters[1];
+        self.access = parameters[2];
 
         self._createToolEntry = function () {
             return {
@@ -43,7 +44,7 @@ $(function() {
         self.keycontrolActive = ko.observable(false);
         self.keycontrolHelpActive = ko.observable(false);
         self.keycontrolPossible = ko.pureComputed(function () {
-            return self.settings.feature_keyboardControl() && self.isOperational() && !self.isPrinting() && self.loginState.isUser() && !$.browser.mobile;
+            return self.loginState.hasPermission(self.access.permissions.CONTROL) && self.settings.feature_keyboardControl() && self.isOperational() && !self.isPrinting() && !$.browser.mobile;
         });
         self.showKeycontrols = ko.pureComputed(function () {
             return self.keycontrolActive() && self.keycontrolPossible();
@@ -123,6 +124,10 @@ $(function() {
         };
 
         self.requestData = function () {
+            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) {
+                return;
+            }
+
             OctoPrint.control.getCustomControls()
                 .done(function(response) {
                     self._fromResponse(response);
@@ -203,9 +208,8 @@ $(function() {
                 });
             }
 
-            var js;
             if (control.hasOwnProperty("javascript")) {
-                js = control.javascript;
+                var js = control.javascript;
 
                 // if js is a function everything's fine already, but if it's a string we need to eval that first
                 if (!_.isFunction(js)) {
@@ -216,12 +220,12 @@ $(function() {
             }
 
             if (control.hasOwnProperty("enabled")) {
-                js = control.enabled;
+                var enabled = control.enabled;
 
                 // if js is a function everything's fine already, but if it's a string we need to eval that first
-                if (!_.isFunction(js)) {
+                if (!_.isFunction(enabled)) {
                     control.enabled = function (data) {
-                        return eval(js);
+                        return eval(enabled);
                     }
                 }
             }
@@ -238,7 +242,7 @@ $(function() {
             if (data.hasOwnProperty("enabled")) {
                 return data.enabled(data);
             } else {
-                return self.isOperational() && self.loginState.isUser();
+                return self.loginState.hasPermission(self.access.permissions.CONTROL) && self.isOperational();
             }
         };
 
@@ -353,7 +357,7 @@ $(function() {
             return span + " " + offset;
         };
 
-        self.onStartup = function () {
+        self.onUserPermissionsChanged = self.onUserLoggedIn = self.onUserLoggedOut = function() {
             self.requestData();
         };
 
@@ -560,7 +564,7 @@ $(function() {
 
     OCTOPRINT_VIEWMODELS.push({
         construct: ControlViewModel,
-        dependencies: ["loginStateViewModel", "settingsViewModel"],
-        elements: ["#control"]
+        dependencies: ["loginStateViewModel", "settingsViewModel", "accessViewModel"],
+        elements: ["#control", "#control_link"]
     });
 });

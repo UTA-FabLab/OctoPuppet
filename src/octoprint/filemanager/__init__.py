@@ -1,11 +1,12 @@
-# coding=utf-8
-from __future__ import absolute_import, division, print_function
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
 __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 import logging
+import io
 import os
 
 import octoprint.plugin
@@ -17,6 +18,7 @@ from .destinations import FileDestinations
 from .analysis import QueueEntry, AnalysisQueue
 from .storage import LocalFileStorage
 from .util import AbstractFileWrapper, StreamWrapper, DiskFileWrapper
+from octoprint.util import get_fully_qualified_classname as fqcn
 
 from collections import namedtuple
 
@@ -77,7 +79,7 @@ def full_extension_tree():
 			if plugin_result is None or not isinstance(plugin_result, dict):
 				continue
 			result = octoprint.util.dict_merge(result, plugin_result, leaf_merger=leaf_merger)
-		except:
+		except Exception:
 			logging.getLogger(__name__).exception("Exception while retrieving additional extension "
 			                                      "tree entries from SlicerPlugin {name}".format(name=plugin._identifier),
 			                                      extra=dict(plugin=plugin._identifier))
@@ -89,7 +91,7 @@ def full_extension_tree():
 			if hook_result is None or not isinstance(hook_result, dict):
 				continue
 			result = octoprint.util.dict_merge(result, hook_result, leaf_merger=leaf_merger)
-		except:
+		except Exception:
 			logging.getLogger(__name__).exception("Exception while retrieving additional extension "
 			                                      "tree entries from hook {name}".format(name=name),
 			                                      extra=dict(plugin=name))
@@ -223,6 +225,7 @@ class FileManager(object):
 
 		import octoprint.settings
 		self._recovery_file = os.path.join(octoprint.settings.settings().getBaseFolder("data"), "print_recovery_data.yaml")
+		self._analyzeGcode = octoprint.settings.settings().get(["gcodeAnalysis", "runAt"])
 
 	def initialize(self, process_backlog=False):
 		self.reload_plugins()
@@ -230,6 +233,10 @@ class FileManager(object):
 			self.process_backlog()
 
 	def process_backlog(self):
+		# only check for a backlog if gcodeAnalysis is 'idle' or 'always'
+		if self._analyzeGcode == "never":
+			return
+
 		def worker():
 			self._logger.info("Adding backlog items from all storage types to analysis queue...".format(**locals()))
 			for storage_type, storage_manager in self._storage_managers.items():
@@ -329,26 +336,28 @@ class FileManager(object):
 		                 printer_profile_id, callback, callback_args, _error=None, _cancelled=False, _analysis=None):
 			try:
 				if _error:
-					eventManager().fire(Events.SLICING_FAILED, dict(stl=source_path,
-																	stl_location=source_location,
-																	gcode=dest_path,
-																	gcode_location=dest_location,
-																	reason=_error))
+					eventManager().fire(Events.SLICING_FAILED, dict(slicer=slicer_name,
+					                                                stl=source_path,
+					                                                stl_location=source_location,
+					                                                gcode=dest_path,
+					                                                gcode_location=dest_location,
+					                                                reason=_error))
 				elif _cancelled:
-					eventManager().fire(Events.SLICING_CANCELLED, dict(stl=source_path,
-																	   stl_location=source_location,
-																	   gcode=dest_path,
-																	   gcode_location=dest_location))
+					eventManager().fire(Events.SLICING_CANCELLED, dict(slicer=slicer_name,
+					                                                   stl=source_path,
+					                                                   stl_location=source_location,
+					                                                   gcode=dest_path,
+					                                                   gcode_location=dest_location))
 				else:
 					source_meta = self.get_metadata(source_location, source_path)
-					hash = source_meta["hash"]
+					hash = source_meta.get("hash", "n/a")
 
 					import io
 					links = [("model", dict(name=source_path))]
 					_, stl_name = self.split_path(source_location, source_path)
 					file_obj = StreamWrapper(os.path.basename(dest_path),
-					                         io.BytesIO(u";Generated from {stl_name} {hash}\n".format(**locals()).encode("ascii", "replace")),
-					                         io.FileIO(tmp_path, "rb"))
+					                         io.BytesIO(";Generated from {stl_name} (hash: {hash})\n".format(**locals()).encode("ascii", "replace")),
+					                         io.FileIO(tmp_path, 'rb'))
 
 					printer_profile = self._printer_profile_manager.get(printer_profile_id)
 					self.add_file(dest_location, dest_path, file_obj,
@@ -356,11 +365,12 @@ class FileManager(object):
 					              printer_profile=printer_profile, analysis=_analysis)
 
 					end_time = octoprint.util.monotonic_time()
-					eventManager().fire(Events.SLICING_DONE, dict(stl=source_path,
-																  stl_location=source_location,
-																  gcode=dest_path,
-																  gcode_location=dest_location,
-																  time=end_time - start_time))
+					eventManager().fire(Events.SLICING_DONE, dict(slicer=slicer_name,
+					                                              stl=source_path,
+					                                              stl_location=source_location,
+					                                              gcode=dest_path,
+					                                              gcode_location=dest_location,
+					                                              time=end_time - start_time))
 
 					if callback is not None:
 						if callback_args is None:
@@ -381,7 +391,8 @@ class FileManager(object):
 		slicer = self._slicing_manager.get_slicer(slicer_name)
 
 		start_time = octoprint.util.monotonic_time()
-		eventManager().fire(Events.SLICING_STARTED, {"stl": source_path,
+		eventManager().fire(Events.SLICING_STARTED, {"slicer": slicer_name,
+		                                             "stl": source_path,
 		                                             "stl_location": source_location,
 		                                             "gcode": dest_path,
 		                                             "gcode_location": dest_location,
@@ -424,15 +435,18 @@ class FileManager(object):
 		if self._last_slicing_progress != progress_int:
 			self._last_slicing_progress = progress_int
 			for callback in self._slicing_progress_callbacks:
-				try: callback.sendSlicingProgress(slicer, source_location, source_path, dest_location, dest_path, progress_int)
-				except: self._logger.exception("Exception while pushing slicing progress")
+				try:
+					callback.sendSlicingProgress(slicer, source_location, source_path, dest_location, dest_path, progress_int)
+				except Exception:
+					self._logger.exception("Exception while pushing slicing progress",
+				                           extra=dict(callback=fqcn(callback)))
 
 			if progress_int:
 				def call_plugins(slicer, source_location, source_path, dest_location, dest_path, progress):
 					for plugin in self._progress_plugins:
 						try:
 							plugin.on_slicing_progress(slicer, source_location, source_path, dest_location, dest_path, progress)
-						except:
+						except Exception:
 							self._logger.exception("Exception while sending slicing progress to plugin %s" % plugin._identifier,
 							                       extra=dict(plugin=plugin._identifier))
 
@@ -456,8 +470,8 @@ class FileManager(object):
 
 	def list_files(self, destinations=None, path=None, filter=None, recursive=None):
 		if not destinations:
-			destinations = self._storage_managers.keys()
-		if isinstance(destinations, (str, unicode, basestring)):
+			destinations = list(self._storage_managers.keys())
+		if isinstance(destinations, basestring):
 			destinations = [destinations]
 
 		result = dict()
@@ -472,7 +486,7 @@ class FileManager(object):
 		for name, hook in self._preprocessor_hooks.items():
 			try:
 				hook_file_object = hook(path, file_object, links=links, printer_profile=printer_profile, allow_overwrite=allow_overwrite)
-			except:
+			except Exception:
 				self._logger.exception("Error when calling preprocessor hook for plugin {}, ignoring".format(name), extra=dict(plugin=name))
 				continue
 
@@ -632,9 +646,9 @@ class FileManager(object):
 		            pos=pos,
 		            date=time.time())
 		try:
-			with atomic_write(self._recovery_file, max_permissions=0o666) as f:
-				yaml.safe_dump(data, stream=f, default_flow_style=False, indent="  ", allow_unicode=True)
-		except:
+			with atomic_write(self._recovery_file, mode='wt', max_permissions=0o666) as f:
+				yaml.safe_dump(data, stream=f, default_flow_style=False, indent=2, allow_unicode=True)
+		except Exception:
 			self._logger.exception("Could not write recovery data to file {}".format(self._recovery_file))
 
 	def delete_recovery_data(self):
@@ -643,7 +657,7 @@ class FileManager(object):
 
 		try:
 			os.remove(self._recovery_file)
-		except:
+		except Exception:
 			self._logger.exception("Error deleting recovery data file {}".format(self._recovery_file))
 
 	def get_recovery_data(self):
@@ -652,10 +666,12 @@ class FileManager(object):
 
 		import yaml
 		try:
-			with open(self._recovery_file) as f:
+			with io.open(self._recovery_file, 'rt', encoding='utf-8') as f:
 				data = yaml.safe_load(f)
+			if not isinstance(data, dict) or not all(map(lambda x: x in data, ("origin", "path", "pos", "date"))):
+				raise ValueError("Invalid recovery data structure")
 			return data
-		except:
+		except Exception:
 			self._logger.exception("Could not read recovery data from file {}".format(self._recovery_file))
 			self.delete_recovery_data()
 

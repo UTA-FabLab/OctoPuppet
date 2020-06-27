@@ -38,6 +38,13 @@ Example
      - event: PrintDone
        command: python ~/growl.py -t mygrowlserver -d "Completed {file}" -a OctoPrint -i http://raspi/Octoprint_logo.png
        type: system
+     - event:
+       - PrintStarted
+       - PrintFailed
+       - PrintDone
+       - PrintCancelled
+       command: python ~/growl.py -t mygrowlserver -d "Event {__eventname} ({name})" -a OctoPrint -i http://raspi/Octoprint_logo.png
+       type: system
      - event: Connected
        command:
        - M115
@@ -53,6 +60,7 @@ Placeholders
 You can use the following generic placeholders in your event hooks:
 
   * ``{__currentZ}``: the current Z position of the head if known, -1 if not available
+  * ``{__eventname}`` : the name of the event hook being triggered
   * ``{__filename}`` : name of currently selected file, or ``NO FILE`` if no file is selected
   * ``{__filepath}`` : path in origin location of currently selected file, or ``NO FILE`` if no file is selected
   * ``{__fileorigin}`` : origin of currently selected file, or ``NO FILE`` if no file is selected
@@ -92,20 +100,44 @@ Shutdown
    The server is shutting down.
 
 ClientOpened
-   A client has connected to the web server.
+   A client has connected to the push socket.
 
    Payload:
 
-     * ``remoteAddress``: the remote address (IP) of the client that connected
+     * ``remoteAddress``: the remote address (IP) of the client that connected. On the push socket only available with
+       a valid login session.
 
    **Note:** Name changed in version 1.1.0
 
-ClientClosed
-   A client has disconnected from the webserver
+ClientAuthed
+   A client has authenticated a user session on the push socket.
 
    Payload:
 
-     * ``remoteAddress``: the remote address (IP) of the client that disconnected
+     * ``remoteAddress``: the remote address (IP) of the client that authed. On the push socket only available with a
+       valid login session.
+     * ``username``: the name of the user who authed. On the push socket only available with a valid login session.
+
+ClientClosed
+   A client has disconnected from the push socket.
+
+   Payload:
+
+     * ``remoteAddress``: the remote address (IP) of the client that disconnected. On the push socket only available
+       with a valid login session.
+
+UserLoggedIn
+   A user logged in. On the push socket only available with a valid login session with admin rights.
+
+   Payload:
+
+     * ``username``: the name of the user who logged in
+
+UserLoggedOut
+   A user logged out. On the push socket only available with a valid login session with admin rights.
+
+   Payload:
+     * ``username``: the name of the user who logged out
 
 ConnectivityChanged
    The server's internet connectivity changed
@@ -142,6 +174,9 @@ Disconnected
 Error
    An unrecoverable error has been encountered, either as reported by the firmware (e.g. a thermal runaway) or
    on the connection.
+
+   Note that this event will not fire for error messages from the firmware that are handled (and as such recovered from)
+   either by OctoPrint or a plugin.
 
    Payload:
 
@@ -580,6 +615,7 @@ SlicingStarted
 
    Payload:
 
+     * ``slicer``: the used slicer
      * ``stl``: the STL's filename
      * ``stl_location``: the STL's location
      * ``gcode``: the sliced GCODE's filename
@@ -591,6 +627,7 @@ SlicingDone
 
    Payload:
 
+     * ``slicer``: the used slicer
      * ``stl``: the STL's filename
      * ``stl_location``: the STL's location
      * ``gcode``: the sliced GCODE's filename
@@ -603,6 +640,7 @@ SlicingCancelled
 
    Payload:
 
+     * ``slicer``: the used slicer
      * ``stl``: the STL's filename
      * ``stl_location``: the STL's location
      * ``gcode``: the sliced GCODE's filename
@@ -613,6 +651,7 @@ SlicingFailed
 
    Payload:
 
+     * ``slicer``: the used slicer
      * ``stl``: the STL's filename
      * ``stl_location``: the STL's location
      * ``gcode``: the sliced GCODE's filename
@@ -628,7 +667,7 @@ SlicingProfileAdded
      * ``profile``: the profile that was added
 
 SlicingProfileModified
-   A new slicing profile was modified.
+   A slicing profile was modified.
 
    Payload:
 
@@ -653,3 +692,15 @@ SettingsUpdated
 
    This event may also be triggered if calling code of :py:class:`octoprint.settings.Settings.save` or
    :py:class:`octoprint.plugin.PluginSettings.save` sets the ``trigger_event`` parameter to ``True``.
+
+.. _sec-events-available_events-printer_profile:
+
+Printer Profile
+---------------
+
+PrinterProfileModified
+   A printer profile was modified.
+
+   Payload:
+
+     * ``identifier``: the identifier of the modified printer profile

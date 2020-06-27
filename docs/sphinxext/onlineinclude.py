@@ -1,5 +1,5 @@
-# coding=utf-8
-from __future__ import absolute_import
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = 'The MIT License <http://opensource.org/licenses/MIT>'
@@ -11,7 +11,8 @@ import requests
 from contextlib import closing
 
 from sphinx.directives.code import LiteralIncludeReader, LiteralInclude, dedent_lines, \
-	nodes, set_source_info, parselinenos, logger, container_wrapper
+	nodes, parselinenos, logger, container_wrapper
+from sphinx.util.nodes import set_source_info
 
 if False:
 	# For type annotation
@@ -39,11 +40,10 @@ class OnlineIncludeReader(LiteralIncludeReader):
 
 			return lines
 		except (IOError, OSError):
-			raise IOError(_('Include file %r not found or reading it failed') % filename)
+			raise IOError('Include file %r not found or reading it failed' % filename)
 		except UnicodeError:
-			raise UnicodeError(_('Encoding %r used for reading included file %r seems to '
-			                     'be wrong, try giving an :encoding: option') %
-			                   (self.encoding, filename))
+			raise UnicodeError('Encoding %r used for reading included file %r seems to '
+			                   'be wrong, try giving an :encoding: option' % (self.encoding, filename))
 
 
 class OnlineIncludeDirective(LiteralInclude):
@@ -54,18 +54,16 @@ class OnlineIncludeDirective(LiteralInclude):
 		if not document.settings.file_insertion_enabled:
 			return [document.reporter.warning('File insertion disabled',
 			                                  line=self.lineno)]
-		env = document.settings.env
-
 		# convert options['diff'] to absolute path
 		if 'diff' in self.options:
-			_, path = env.relfn2path(self.options['diff'])
+			_, path = self.env.relfn2path(self.options['diff'])
 			self.options['diff'] = path
 
 		try:
 			location = self.state_machine.get_source_and_line(self.lineno)
 			url = self.arguments[0]
 
-			reader = OnlineIncludeReader(url, self.options, env.config)
+			reader = OnlineIncludeReader(url, self.options, self.config)
 			text, lines = reader.read(location=location)
 
 			retnode = nodes.literal_block(text, text, source=url)

@@ -3,11 +3,22 @@ $(function() {
         var self = this;
 
         self.loginState = parameters[0];
+        self.access = parameters[1];
 
-        self._modal = undefined;
+        self.modal = ko.observable(undefined);
+
+        self.text = ko.observable();
+        self.buttons = ko.observableArray([]);
+
+        self.active = ko.pureComputed(function() {
+            return self.text() !== undefined;
+        });
+        self.visible = ko.pureComputed(function() {
+            return self.modal() !== undefined;
+        });
 
         self.requestData = function() {
-            if (!self.loginState.isUser()) return;
+            if (!self.loginState.hasPermission(self.access.permissions.PLUGIN_ACTION_COMMAND_PROMPT_INTERACT)) return;
 
             OctoPrint.plugins.action_command_prompt.get()
                 .done(self.fromResponse);
@@ -15,26 +26,35 @@ $(function() {
 
         self.fromResponse = function(data) {
             if (data.hasOwnProperty("text") && data.hasOwnProperty("choices")) {
-                self._showPrompt(data.text, data.choices);
+                self.text(data.text);
+                self.buttons(data.choices);
+                self.showPrompt();
+            } else {
+                self.text(undefined);
+                self.buttons([]);
             }
         };
 
-        self._showPrompt = function(text, buttons) {
+        self.showPrompt = function() {
+            var text = self.text();
+            var buttons = self.buttons();
+
             var opts = {
                 title: gettext("Message from your printer"),
                 message: text,
                 selections: buttons,
+                maycancel: true, // see #3171
                 onselect: function(index) {
                     if (index > -1) {
                         self._select(index);
                     }
                 },
                 onclose: function() {
-                    self._modal = undefined;
+                    self.modal(undefined);
                 }
             };
 
-            self._modal = showSelectionDialog(opts)
+            self.modal(showSelectionDialog(opts));
         };
 
         self._select = function(index) {
@@ -42,8 +62,9 @@ $(function() {
         };
 
         self._closePrompt = function() {
-            if (self._modal) {
-                self._modal.modal("hide");
+            var modal = self.modal();
+            if (modal) {
+                modal.modal("hide");
             }
         };
 
@@ -52,17 +73,21 @@ $(function() {
         };
 
         self.onDataUpdaterPluginMessage = function(plugin, data) {
-            if (!self.loginState.isUser()) return;
+            if (!self.loginState.hasPermission(self.access.permissions.PLUGIN_ACTION_COMMAND_PROMPT_INTERACT)) return;
             if (plugin !== "action_command_prompt") {
                 return;
             }
 
             switch (data.action) {
                 case "show": {
-                    self._showPrompt(data.text, data.choices);
+                    self.text(data.text);
+                    self.buttons(data.choices);
+                    self.showPrompt();
                     break;
                 }
                 case "close": {
+                    self.text(undefined);
+                    self.buttons([]);
                     self._closePrompt();
                     break;
                 }
@@ -73,6 +98,7 @@ $(function() {
 
     OCTOPRINT_VIEWMODELS.push({
         construct: ActionCommandPromptViewModel,
-        dependencies: ["loginStateViewModel"]
+        dependencies: ["loginStateViewModel", "accessViewModel"],
+        elements: ["#navbar_plugin_action_command_prompt"]
     });
 });

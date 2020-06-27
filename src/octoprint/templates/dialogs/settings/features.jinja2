@@ -16,6 +16,13 @@
     <div class="control-group">
         <div class="controls">
             <label class="checkbox">
+                <input type="checkbox" data-bind="checked: feature_printStartConfirmation" id="settings-printStartConfirmation"> {{ _('Confirm before starting a print') }}
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <label class="checkbox">
                 <input type="checkbox" data-bind="checked: feature_printCancelConfirmation" id="settings-printCancelConfirmation"> {{ _('Confirm before cancelling a print') }}
             </label>
         </div>
@@ -42,11 +49,26 @@
             </label>
         </div>
     </div>
-    <div class="control-group" title="{{ _('Commands to not completely auto uppercase in the terminal tab') }}">
+    <div class="control-group" title="{{ _('Commands to not completely auto uppercase in the terminal tab')|edq }}">
         <label class="control-label" for="settings-featureAutoUppercaseBlacklist">{{ _('Terminal Auto Uppercase Blacklist') }}</label>
         <div class="controls">
             <input type="text" class="input-block-level" id="settings-featureAutoUppercaseBlacklist" data-bind="value: feature_autoUppercaseBlacklist">
             <span class="help-block">{{ _('Use this to specify the commands that should not have their parameters automatically uppercased in the terminal tab. Just the G or M code, comma separated.') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Analyze gcode for time and model size estimates')}}</label>
+        <div class="controls">
+            <label class="radio">
+                <input type="radio" name="analysisRunAtGroup" value="always" data-bind="checked: gcodeAnalysis_runAt" id="settings-gcodeAnalysis_runAtAlways"> {{ _('Always ') }}
+            </label>
+            <label class="radio">
+                <input type="radio" name="analysisRunAtGroup" value="idle" data-bind="checked: gcodeAnalysis_runAt" id="settings-gcodeAnalysis_runAtIdle"> {{ _('Only when idle (not printing)') }}
+            </label>
+            <label class="radio">
+                <input type="radio" name="analysisRunAtGroup" value="never" data-bind="checked: gcodeAnalysis_runAt" id="settings-gcodeAnalysis_runAtNever"> {{ _('Never') }}
+            </label>
         </div>
     </div>
 </form>

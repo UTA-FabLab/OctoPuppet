@@ -4,6 +4,7 @@ $(function() {
 
         self.loginState = parameters[0];
         self.settings = parameters[1];
+        self.access = parameters[2];
 
         self.tabActive = false;
         self.previousScroll = undefined;
@@ -338,6 +339,10 @@ $(function() {
             copyToClipboard(lines.join("\n"));
         };
 
+        self.clearAllLogs = function() {
+            self.log([]);
+            self.plainLogLines([]);            
+        };
         // command matching regex
         // (Example output for inputs G0, G1, G28.1, M117 test)
         // - 1: code including optional subcode. Example: G0, G1, G28.1, M117
@@ -428,7 +433,7 @@ $(function() {
 
     OCTOPRINT_VIEWMODELS.push({
         construct: TerminalViewModel,
-        dependencies: ["loginStateViewModel", "settingsViewModel"],
-        elements: ["#term"]
+        dependencies: ["loginStateViewModel", "settingsViewModel", "accessViewModel"],
+        elements: ["#term", "#term_link"]
     });
 });

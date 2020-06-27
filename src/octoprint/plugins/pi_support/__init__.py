@@ -1,15 +1,19 @@
-# coding=utf-8
-from __future__ import absolute_import, division, print_function
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
 __copyright__ = "Copyright (C) 2017 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 import flask
+import io
 import os
 import sarge
 
 from flask_babel import gettext
 from octoprint.util import RepeatedTimer
+
+from octoprint.access.permissions import Permissions
+from octoprint.access.groups import USER_GROUP
 
 import octoprint.plugin
 import octoprint.events
@@ -18,14 +22,23 @@ _PROC_DT_MODEL_PATH = "/proc/device-tree/model"
 _OCTOPI_VERSION_PATH = "/etc/octopi_version"
 _VCGENCMD_THROTTLE = "/usr/bin/vcgencmd get_throttled"
 
-### uncomment for local debugging
-#import sys
-#base = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "tests", "plugins", "pi_support", "fakes"))
-#_PROC_DT_MODEL_PATH = os.path.join(base, "fake_model.txt")
-#_OCTOPI_VERSION_PATH = os.path.join(base, "fake_octopi.txt")
-#_VCGENCMD_THROTTLE = "{} {}".format(sys.executable, os.path.join(base, "fake_vcgencmd.py"))
-#import itertools
-#_VCGENCMD_OUTPUT = itertools.chain(iter(("0x0", "0x0", "0x50005", "0x50000", "0x70007")), itertools.repeat("0x70000"))
+_CHECK_INTERVAL_OK = 300
+_CHECK_INTERVAL_THROTTLED = 30
+
+__LOCAL_DEBUG = False
+
+if __LOCAL_DEBUG:
+	### mocks & settings for local debugging
+	import sys
+	base = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "tests", "plugins", "pi_support", "fakes"))
+	_PROC_DT_MODEL_PATH = os.path.join(base, "fake_model.txt")
+	_OCTOPI_VERSION_PATH = os.path.join(base, "fake_octopi.txt")
+	_VCGENCMD_THROTTLE = "{} {}".format(sys.executable, os.path.join(base, "fake_vcgencmd.py"))
+	import itertools
+	_VCGENCMD_OUTPUT = itertools.chain(iter(("0x0", "0x0", "0x50005", "0x50000", "0x70007")), itertools.repeat("0x70005"))
+
+	_CHECK_INTERVAL_OK = 10
+	_CHECK_INTERVAL_THROTTLED = 5
 
 
 # see https://www.raspberrypi.org/forums/viewtopic.php?f=63&t=147781&start=50#p972790
@@ -127,15 +140,18 @@ def get_proc_dt_model():
 	global _proc_dt_model
 
 	if _proc_dt_model is None:
-		with open(_PROC_DT_MODEL_PATH, "r") as f:
+		with io.open(_PROC_DT_MODEL_PATH, 'rt', encoding='utf-8') as f:
 			_proc_dt_model = f.readline().strip(" \t\r\n\0")
 
 	return _proc_dt_model
 
 
 def get_vcgencmd_throttled_state(command):
-	output = sarge.get_stdout(command)
-	#output = "throttled={}".format(next(_VCGENCMD_OUTPUT)) # for local debugging
+	if __LOCAL_DEBUG:
+		output = "throttled={}".format(next(_VCGENCMD_OUTPUT))  # mock for local debugging
+	else:
+		output = sarge.get_stdout(command)
+
 	if not "throttled=0x" in output:
 		raise ValueError("cannot parse \"{}\" output: {}".format(command, output))
 
@@ -153,7 +169,7 @@ def get_octopi_version():
 	global _octopi_version
 
 	if _octopi_version is None:
-		with open(_OCTOPI_VERSION_PATH, "r") as f:
+		with io.open(_OCTOPI_VERSION_PATH, 'rt', encoding='utf-8') as f:
 			_octopi_version = f.readline().strip(" \t\r\n\0")
 
 	return _octopi_version
@@ -174,6 +190,17 @@ class PiSupportPlugin(octoprint.plugin.EnvironmentDetectionPlugin,
 		self._throttle_overheat = False
 		self._throttle_functional = True
 
+	# Additional permissions hook
+
+	def get_additional_permissions(self):
+		return [
+			dict(key="STATUS",
+			     name="Status",
+			     description=gettext("Allows to check for the Pi's throttling status and environment info"),
+			     roles=["check"],
+			     default_groups=[USER_GROUP])
+		]
+
 	#~~ EnvironmentDetectionPlugin
 
 	def get_additional_environment(self):
@@ -187,6 +214,8 @@ class PiSupportPlugin(octoprint.plugin.EnvironmentDetectionPlugin,
 	#~~ SimpleApiPlugin
 
 	def on_api_get(self, request):
+		if not Permissions.PLUGIN_PI_SUPPORT_STATUS.can():
+			return flask.abort(403)
 		result = dict(throttle_state=self._throttle_state.as_dict())
 		result.update(self.get_additional_environment())
 		return flask.jsonify(**result)
@@ -236,11 +265,9 @@ class PiSupportPlugin(octoprint.plugin.EnvironmentDetectionPlugin,
 
 	def _check_throttled_state_interval(self):
 		if self._throttle_state.current_issue:
-			# check state every 30s if something's currently amiss
-			return 30
+			return _CHECK_INTERVAL_THROTTLED
 		else:
-			# check state every 5min if nothing's currently amiss
-			return 300
+			return _CHECK_INTERVAL_OK
 
 	def _check_throttled_state_condition(self):
 		return self._throttle_functional
@@ -261,8 +288,8 @@ class PiSupportPlugin(octoprint.plugin.EnvironmentDetectionPlugin,
 		self._logger.debug("Retrieving throttle state via \"{}\"".format(command))
 		try:
 			state = get_vcgencmd_throttled_state(command)
-		except:
-			self._logger.exception("Got an error while trying to fetch the current throttle state via \"{}\"".format(command))
+		except ValueError:
+			self._logger.warning("Fetching the current throttle state via \"{}\" doesn't work".format(command))
 			self._throttle_functional = False
 			return
 
@@ -287,7 +314,7 @@ class PiSupportPlugin(octoprint.plugin.EnvironmentDetectionPlugin,
 				message += "\n!!! FREQUENCY CAPPING DUE TO OVERHEATING REPORTED !!! Improve cooling on the Pi's " \
 				           "CPU and GPU."
 
-			self._logger.warn(message)
+			self._logger.warning(message)
 
 		self._plugin_manager.send_plugin_message(self._identifier, dict(type="throttle_state",
 		                                                                state=self._throttle_state.as_dict()))
@@ -304,7 +331,7 @@ __plugin_name__ = "Pi Support Plugin"
 __plugin_author__ = "Gina Häußge"
 __plugin_description__ = "Provides additional information about your Pi in the UI."
 __plugin_disabling_discouraged__ = gettext("Without this plugin OctoPrint will no longer be able to "
-                                           "provide additional information about your Pi,"
+                                           "provide additional information about your Pi, "
                                            "which will make it more tricky to help you if you need support.")
 __plugin_license__ = "AGPLv3"
 
@@ -313,7 +340,7 @@ def __plugin_check__():
 		proc_dt_model = get_proc_dt_model()
 		if proc_dt_model is None:
 			return False
-	except:
+	except Exception:
 		return False
 
 	return "raspberry pi" in proc_dt_model.lower()
@@ -325,7 +352,8 @@ def __plugin_load__():
 
 	global __plugin_hooks__
 	__plugin_hooks__ = {
-		"octoprint.events.register_custom_events": register_custom_events
+		"octoprint.events.register_custom_events": register_custom_events,
+		"octoprint.access.permissions": __plugin_implementation__.get_additional_permissions
 	}
 
 	global __plugin_helpers__

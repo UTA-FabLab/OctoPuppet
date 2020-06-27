@@ -5,7 +5,7 @@ config.yaml
 
 If not specified via the command line, the main configuration file ``config.yaml`` for OctoPrint is expected in its
 settings folder, which unless defined differently via the command line is located at ``~/.octoprint`` on Linux, at
-``%APPDATA%/OctoPrint`` on Windows and at ``~/Library/Application Support/OctoPrint`` on MacOS. If the file is not there,
+``%APPDATA%/OctoPrint`` on Windows and at ``~/Library/Application Support/OctoPrint`` on macOS. If the file is not there,
 you can just create it - it will only get created by OctoPrint once you save settings that deviate from the default
 settings.
 
@@ -29,7 +29,7 @@ Use the following settings to enable access control:
      # The user manager implementation to use for accessing user information. Currently only a filebased
      # user manager is implemented which stores configured accounts in a YAML file (Default: users.yaml
      # in the default configuration folder, see below)
-     userManager: octoprint.users.FilebasedUserManager
+     userManager: octoprint.access.users.FilebasedUserManager
 
      # The YAML user file to use. If left out defaults to users.yaml in the default configuration folder.
      userFile: /path/to/users.yaml
@@ -61,6 +61,18 @@ Use the following settings to enable access control:
      # header is to be trusted. Disabling this will only match the user name in the Basic Authentication
      # header and login the user without further checks. Use with caution.
      checkBasicAuthenticationPassword: true
+
+     # Whether to trust remote user headers. If you have setup authentication in front of
+     # OctoPrint and the user names you use there match OctoPrint accounts, by setting this to true users will
+     # be logged into OctoPrint as the user provided in the header. Your should ONLY ENABLE THIS if your
+     # OctoPrint instance is only accessible through a connection locked down through an authenticating reverse proxy!
+     trustRemoteUser: false
+
+     # Header used by the reverse proxy to convey the authenticated user.
+     remoteUserHeader: REMOTE_USER
+
+     # If a remote user is not found, add them. Use this only if all users from the remote system can use OctoPrint.
+     addRemoteUsers: false
 
 .. _sec-configuration-config_yaml-api:
 
@@ -277,6 +289,9 @@ The following settings are only relevant to you if you want to do OctoPrint deve
 
        # Whether to delete generated web assets on server startup (forcing a regeneration)
        clean_on_startup: true
+
+     # enable or disable the loading animation
+     showLoadingAnimation: true
 
      # Settings for the virtual printer
      virtualPrinter:
@@ -670,6 +685,11 @@ plugins are tracked:
 
      # Identifiers of installed but disabled plugins
      _disabled:
+     - ...
+
+     # Identifiers of plugins for which python compatibility information will be ignored and
+     # the plugin considered compatible in any case. Only for development, do NOT use in production.
+     _forcedCompatible:
      - ...
 
      # The rest are individual plugin settings, each tracked by their identifier, e.g.:
@@ -1231,6 +1251,9 @@ Use the following settings to configure webcam support:
      # Number of how many threads to instruct ffmpeg to use for encoding. Defaults to 1.
      # Should be left at 1 for RPi1.
      ffmpegThreads: 1
+
+     # Videocodec to be used for encoding. Defaults to mpeg2video.
+     ffmpegVideoCodec: mpeg2video
 
      # The bitrate to use for rendering the timelapse video. This gets directly passed to ffmpeg.
      bitrate: 5000k

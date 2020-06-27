@@ -1,4 +1,6 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """
 This module represents OctoPrint's settings management. Within this module the default settings for the core
 application are defined and the instance of the :class:`Settings` is held, which offers getter and setter
@@ -17,12 +19,11 @@ of various types and the configuration file itself.
    :undoc-members:
 """
 
-from __future__ import absolute_import, division, print_function
-
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
 __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
+import io
 import sys
 import os
 import yaml
@@ -43,7 +44,12 @@ try:
 except ImportError:
 	from chainmap import ChainMap
 
-from octoprint.util import atomic_write, is_hidden_path, dict_merge, CaseInsensitiveSet
+try:
+	from collections.abc import KeysView
+except ImportError:
+	from collections import KeysView
+
+from octoprint.util import atomic_write, is_hidden_path, dict_merge, CaseInsensitiveSet, generate_api_key
 
 _APPNAME = "OctoPrint"
 
@@ -116,6 +122,7 @@ default_settings = {
 		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32", "M400", "M226", "M600"],
 		"blockedCommands": ["M0", "M1"],
 		"pausingCommands": ["M0", "M1", "M25"],
+		"emergencyCommands": ["M112", "M108", "M410"],
 		"checksumRequiringCommands": ["M110"],
 		"helloCommand": "M110 N0",
 		"disconnectOnErrors": True,
@@ -143,6 +150,10 @@ default_settings = {
 		"supportFAsCommand": False,
 		"firmwareDetection": True,
 		"blockWhileDwelling": False,
+		"useParityWorkaround": "detect",
+		"maxConsecutiveResends": 10,
+		"sendM112OnError": True,
+		"ackMax": 1,
 
 		"capabilities": {
 			"autoreport_temp": True,
@@ -210,7 +221,8 @@ default_settings = {
 		"ipCheck": {
 			"enabled": True,
 			"trustedSubnets": []
-		}
+		},
+		"allowFraming": False
 	},
 	"webcam": {
 		"webcamEnabled": True,
@@ -223,7 +235,8 @@ default_settings = {
 		"snapshotSslValidation": True,
 		"ffmpeg": None,
 		"ffmpegThreads": 1,
-		"bitrate": "5000k",
+		"ffmpegVideoCodec": "mpeg2video",
+		"bitrate": "10000k",
 		"watermark": True,
 		"flipH": False,
 		"flipV": False,
@@ -245,7 +258,8 @@ default_settings = {
 		"maxExtruders": 10,
 		"throttle_normalprio": 0.01,
 		"throttle_highprio": 0.0,
-		"throttle_lines": 100
+		"throttle_lines": 100,
+		"runAt": "idle" # 'never', 'idle', 'always'
 	},
 	"feature": {
 		"temperatureGraph": True,
@@ -253,6 +267,7 @@ default_settings = {
 		"keyboardControl": True,
 		"pollWatched": False,
 		"modelSizeDetection": True,
+		"printStartConfirmation": False,
 		"printCancelConfirmation": True,
 		"autoUppercaseBlacklist": ["M117", "M118"],
 		"g90InfluencesExtruder": False
@@ -297,6 +312,7 @@ default_settings = {
 		"defaultLanguage": "_default",
 		"showFahrenheitAlso": False,
 		"fuzzyTimes": True,
+		"closeModalsWithClick": True,
 		"components": {
 			"order": {
 				"navbar": ["settings", "systemmenu", "plugin_announcements", "plugin_pi_support", "login"],
@@ -331,13 +347,19 @@ default_settings = {
 	"accessControl": {
 		"enabled": True,
 		"salt": None,
-		"userManager": "octoprint.users.FilebasedUserManager",
+		"userManager": "octoprint.access.users.FilebasedUserManager",
+		"groupManager": "octoprint.access.groups.FilebasedGroupManager",
+		"permissionManager": "octoprint.access.permissions.PermissionManager",
 		"userfile": None,
+		"groupfile": None,
 		"autologinLocal": False,
 		"localNetworks": ["127.0.0.0/8", "::1/128"],
 		"autologinAs": None,
 		"trustBasicAuthentication": False,
-		"checkBasicAuthenticationPassword": True
+		"checkBasicAuthenticationPassword": True,
+		"trustRemoteUser": False,
+		"remoteUserHeader": "REMOTE_USER",
+		"addRemoteUsers": False
 	},
 	"slicing": {
 		"enabled": True,
@@ -354,12 +376,13 @@ default_settings = {
 		"apps": {}
 	},
 	"terminalFilters": [
-		{ "name": "Suppress temperature messages", "regex": "(Send: (N\d+\s+)?M105)|(Recv:\s+(ok\s+((P|B|N)\d+\s+)*)?(B|T\d*):\d+)" },
-		{ "name": "Suppress SD status messages", "regex": "(Send: (N\d+\s+)?M27)|(Recv: SD printing byte)|(Recv: Not SD printing)" },
+		{ "name": "Suppress temperature messages", "regex": r"(Send: (N\d+\s+)?M105)|(Recv:\s+(ok\s+((P|B|N)\d+\s+)*)?(B|T\d*):\d+)" },
+		{ "name": "Suppress SD status messages", "regex": r"(Send: (N\d+\s+)?M27)|(Recv: SD printing byte)|(Recv: Not SD printing)" },
 		{ "name": "Suppress wait responses", "regex": "Recv: wait"}
 	],
 	"plugins": {
-		"_disabled": []
+		"_disabled": [],
+		"_forcedCompatible": []
 	},
 	"scripts": {
 		"gcode": {
@@ -390,6 +413,7 @@ default_settings = {
 			"clean_on_startup": True
 		},
 		"useFrozenDictForPrinterState": True,
+		"showLoadingAnimation": True,
 		"virtualPrinter": {
 			"enabled": False,
 			"okAfterResend": False,
@@ -455,11 +479,11 @@ valid_boolean_trues = CaseInsensitiveSet(True, "true", "yes", "y", "1", 1)
 """ Values that are considered to be equivalent to the boolean ``True`` value, used for type conversion in various places."""
 
 
-class NoSuchSettingsPath(BaseException):
+class NoSuchSettingsPath(Exception):
 	pass
 
 
-class InvalidSettings(BaseException):
+class InvalidSettings(Exception):
 	def __init__(self, message, line=None, column=None, details=None):
 		self.message = message
 		self.line = line
@@ -659,7 +683,7 @@ class Settings(object):
 		if not os.path.isdir(self._basedir):
 			try:
 				os.makedirs(self._basedir)
-			except:
+			except Exception:
 				self._logger.fatal("Could not create basefolder at {}. This is a fatal error, OctoPrint "
 				                   "can't run without a writable base folder.".format(self._basedir), exc_info=1)
 				raise
@@ -722,7 +746,7 @@ class Settings(object):
 				templates = []
 				for key in scripts:
 					if isinstance(scripts[key], dict):
-						templates += map(lambda x: key + "/" + x, self._get_templates(scripts[key]))
+						templates += list(map(lambda x: key + "/" + x, self._get_templates(scripts[key])))
 					elif isinstance(scripts[key], basestring):
 						templates.append(key)
 				return templates
@@ -793,7 +817,7 @@ class Settings(object):
 				return self._script_env.get_template(template_name)
 		except TemplateNotFound:
 			return None
-		except:
+		except Exception:
 			self._logger.exception("Exception while trying to resolve template {template_name}".format(**locals()))
 			return None
 
@@ -809,20 +833,20 @@ class Settings(object):
 				# if it's a template matcher, we need to add a key to associate with the matcher output
 				import hashlib
 				key_hash = hashlib.md5()
-				key_hash.update(result["regex"])
+				key_hash.update(result["regex"].encode('utf-8'))
 				result["key"] = key_hash.hexdigest()
 
 				template_key_hash = hashlib.md5()
-				template_key_hash.update(result["template"])
+				template_key_hash.update(result["template"].encode('utf-8'))
 				result["template_key"] = template_key_hash.hexdigest()
 
 			elif "children" in result:
 				# if it has children we need to process them recursively
-				result["children"] = map(process_control, [child for child in result["children"] if child is not None])
+				result["children"] = list(map(process_control, [child for child in result["children"] if child is not None]))
 
 			return result
 
-		return map(process_control, controls)
+		return list(map(process_control, controls))
 
 	@property
 	def effective(self):
@@ -837,7 +861,7 @@ class Settings(object):
 	def effective_hash(self):
 		import hashlib
 		hash = hashlib.md5()
-		hash.update(self.effective_yaml)
+		hash.update(self.effective_yaml.encode('utf-8'))
 		return hash.hexdigest()
 
 	@property
@@ -849,7 +873,7 @@ class Settings(object):
 	def config_hash(self):
 		import hashlib
 		hash = hashlib.md5()
-		hash.update(self.config_yaml)
+		hash.update(self.config_yaml.encode('utf-8'))
 		return hash.hexdigest()
 
 	@property
@@ -888,7 +912,7 @@ class Settings(object):
 
 	def load(self, migrate=False):
 		if os.path.exists(self._configfile) and os.path.isfile(self._configfile):
-			with open(self._configfile, "r") as f:
+			with io.open(self._configfile, 'rt', encoding='utf-8', errors='replace') as f:
 				try:
 					self._config = yaml.safe_load(f)
 					self._mtime = self.last_modified
@@ -908,9 +932,6 @@ class Settings(object):
 					                      line=line,
 					                      column=column)
 
-				except:
-					raise
-
 		# changed from else to handle cases where the file exists, but is empty / 0 bytes
 		if not self._config or not isinstance(self._config, dict):
 			self._config = dict()
@@ -924,13 +945,13 @@ class Settings(object):
 		if callable(overlay):
 			try:
 				overlay = overlay(self)
-			except:
+			except Exception:
 				self._logger.exception("Error loading overlay from callable")
 				return
 
 		if isinstance(overlay, basestring):
 			if os.path.exists(overlay) and os.path.isfile(overlay):
-				with open(overlay, "r") as f:
+				with io.open(overlay, 'rt', encoding='utf-8', errors='replace') as f:
 					config = yaml.safe_load(f)
 		elif isinstance(overlay, dict):
 			config = overlay
@@ -1075,7 +1096,7 @@ class Settings(object):
 
 		Added in 1.2.0
 		"""
-		if "server" in config.keys() and ("baseUrl" in config["server"] or "scheme" in config["server"]):
+		if "server" in config and ("baseUrl" in config["server"] or "scheme" in config["server"]):
 			prefix = ""
 			if "baseUrl" in config["server"]:
 				prefix = config["server"]["baseUrl"]
@@ -1104,11 +1125,11 @@ class Settings(object):
 
 		Added in 1.2.0
 		"""
-		if "events" in config.keys() and ("gcodeCommandTrigger" in config["events"] or "systemCommandTrigger" in config["events"]):
+		if "events" in config and ("gcodeCommandTrigger" in config["events"] or "systemCommandTrigger" in config["events"]):
 			self._logger.info("Migrating config (event subscriptions)...")
 
 			# migrate event hooks to new format
-			placeholderRe = re.compile("%\((.*?)\)s")
+			placeholderRe = re.compile(r"%\((.*?)\)s")
 
 			eventNameReplacements = {
 				"ClientOpen": "ClientOpened",
@@ -1227,7 +1248,7 @@ class Settings(object):
 						self._logger.info("Migrated {} action to server.commands.{}".format(action, migrate_to))
 
 					to_delete.append(index)
-					self._logger.info("Deleting {} action from configured system commands, superseeded by server.commands.{}".format(action, migrate_to))
+					self._logger.info("Deleting {} action from configured system commands, superseded by server.commands.{}".format(action, migrate_to))
 
 			for index in reversed(to_delete):
 				actions.pop(index)
@@ -1367,12 +1388,11 @@ class Settings(object):
 		if not self._dirty and not force:
 			return False
 
-		from octoprint.util import atomic_write
 		try:
-			with atomic_write(self._configfile, "wb", prefix="octoprint-config-", suffix=".yaml", permissions=0o600, max_permissions=0o666) as configFile:
-				yaml.safe_dump(self._config, configFile, default_flow_style=False, indent="    ", allow_unicode=True)
+			with atomic_write(self._configfile, mode='wt', prefix="octoprint-config-", suffix=".yaml", permissions=0o600, max_permissions=0o666) as configFile:
+				yaml.safe_dump(self._config, configFile, default_flow_style=False, indent=4, allow_unicode=True)
 				self._dirty = False
-		except:
+		except Exception:
 			self._logger.exception("Error while saving config.yaml!")
 			raise
 		else:
@@ -1453,13 +1473,15 @@ class Settings(object):
 			if preprocessors is not None:
 				try:
 					preprocessor = self._get_by_path(path, preprocessors)
-				except:
+				except Exception:
 					pass
 
 				if callable(preprocessor):
 					value = preprocessor(value)
 
 			if do_copy:
+				if isinstance(value, KeysView):
+					value = list(value)
 				value = copy.deepcopy(value)
 
 			if asdict:
@@ -1469,7 +1491,7 @@ class Settings(object):
 
 		if not isinstance(last, (list, tuple)):
 			if asdict:
-				return results.values().pop()
+				return list(results.values()).pop()
 			else:
 				return results.pop()
 		else:
@@ -1523,7 +1545,7 @@ class Settings(object):
 			else:
 				return intValue
 		except ValueError:
-			self._logger.warn("Could not convert %r to a valid integer when getting option %r" % (value, path))
+			self._logger.warning("Could not convert %r to a valid integer when getting option %r" % (value, path))
 			return None
 
 	def getFloat(self, path, **kwargs):
@@ -1544,7 +1566,7 @@ class Settings(object):
 			else:
 				return floatValue
 		except ValueError:
-			self._logger.warn("Could not convert %r to a valid integer when getting option %r" % (value, path))
+			self._logger.warning("Could not convert %r to a valid integer when getting option %r" % (value, path))
 			return None
 
 	def getBoolean(self, path, **kwargs):
@@ -1555,12 +1577,12 @@ class Settings(object):
 			return value
 		if isinstance(value, (int, float)):
 			return value != 0
-		if isinstance(value, (str, unicode)):
+		if isinstance(value, basestring):
 			return value.lower() in valid_boolean_trues
 		return value is not None
 
 	def getBaseFolder(self, type, create=True, allow_fallback=True, log_error=False, check_writable=True, deep_check_writable=False):
-		if type not in default_settings["folder"].keys() + ["base"]:
+		if type != "base" and type not in default_settings["folder"]:
 			return None
 
 		if type == "base":
@@ -1573,7 +1595,7 @@ class Settings(object):
 
 		try:
 			_validate_folder(folder, create=create, check_writable=check_writable, deep_check_writable=deep_check_writable, log_error=log_error)
-		except:
+		except Exception:
 			if folder != default_folder and allow_fallback:
 				if log_error:
 					self._logger.error("Invalid configured {} folder at {}, attempting to "
@@ -1598,7 +1620,7 @@ class Settings(object):
 		return folder
 
 	def listScripts(self, script_type):
-		return map(lambda x: x[len(script_type + "/"):], filter(lambda x: x.startswith(script_type + "/"), self._get_scripts(script_type)))
+		return list(map(lambda x: x[len(script_type + "/"):], filter(lambda x: x.startswith(script_type + "/"), self._get_scripts(script_type))))
 
 	def loadScript(self, script_type, name, context=None, source=False):
 		if context is None:
@@ -1614,7 +1636,7 @@ class Settings(object):
 		else:
 			try:
 				script = template.render(**context)
-			except:
+			except Exception:
 				self._logger.exception("Exception while trying to render script {script_type}:{name}".format(**locals()))
 				return None
 
@@ -1725,7 +1747,7 @@ class Settings(object):
 			if maximum is not None and intValue > maximum:
 				intValue = maximum
 		except ValueError:
-			self._logger.warn("Could not convert %r to a valid integer when setting option %r" % (value, path))
+			self._logger.warning("Could not convert %r to a valid integer when setting option %r" % (value, path))
 			return
 
 		self.set(path, intValue, **kwargs)
@@ -1746,7 +1768,7 @@ class Settings(object):
 			if maximum is not None and floatValue > maximum:
 				floatValue = maximum
 		except ValueError:
-			self._logger.warn("Could not convert %r to a valid integer when setting option %r" % (value, path))
+			self._logger.warning("Could not convert %r to a valid integer when setting option %r" % (value, path))
 			return
 
 		self.set(path, floatValue, **kwargs)
@@ -1760,12 +1782,12 @@ class Settings(object):
 			self.set(path, False, **kwargs)
 
 	def setBaseFolder(self, type, path, force=False, validate=True):
-		if type not in default_settings["folder"].keys():
+		if type not in default_settings["folder"]:
 			return None
 
 		currentPath = self.getBaseFolder(type)
 		defaultPath = self._get_default_folder(type)
-		if (path is None or path == defaultPath) and "folder" in self._config.keys() and type in self._config["folder"].keys():
+		if (path is None or path == defaultPath) and "folder" in self._config and type in self._config["folder"]:
 			del self._config["folder"][type]
 			if not self._config["folder"]:
 				del self._config["folder"]
@@ -1775,7 +1797,7 @@ class Settings(object):
 			if validate:
 				_validate_folder(path, check_writable=True, deep_check_writable=True)
 
-			if not "folder" in self._config.keys():
+			if "folder" not in self._config:
 				self._config["folder"] = {}
 			self._config["folder"][type] = path
 			self._dirty = True
@@ -1791,11 +1813,11 @@ class Settings(object):
 		path, _ = os.path.split(filename)
 		if not os.path.exists(path):
 			os.makedirs(path)
-		with atomic_write(filename, "wb", max_permissions=0o666) as f:
+		with atomic_write(filename, mode='wt', max_permissions=0o666) as f:
 			f.write(script)
 
 	def generateApiKey(self):
-		apikey = ''.join('%02X' % z for z in bytes(uuid.uuid4().bytes))
+		apikey = generate_api_key()
 		self.set(["api", "key"], apikey)
 		self.save(force=True)
 		return apikey
@@ -1828,7 +1850,7 @@ def _validate_folder(folder, create=True, check_writable=True, deep_check_writab
 			# non existing, but we are allowed to create it
 			try:
 				os.makedirs(folder)
-			except:
+			except Exception:
 				if log_error:
 					logger.exception("Could not create {}".format(folder))
 				raise IOError("Folder for type {} at {} does not exist and creation failed".format(type, folder))
@@ -1852,10 +1874,10 @@ def _validate_folder(folder, create=True, check_writable=True, deep_check_writab
 			# to determine whether things are *actually* writable
 			testfile = os.path.join(folder, ".testballoon.txt")
 			try:
-				with open(testfile, "wb") as f:
+				with io.open(testfile, 'wt', encoding='utf-8') as f:
 					f.write("test")
 				os.remove(testfile)
-			except:
+			except Exception:
 				if log_error:
 					logger.exception("Could not write test file to {}".format(folder))
 				raise IOError(error)

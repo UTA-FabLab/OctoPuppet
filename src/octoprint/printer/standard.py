@@ -1,9 +1,9 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """
 This module holds the standard implementation of the :class:`PrinterInterface` and it helpers.
 """
-
-from __future__ import absolute_import, division, print_function
 
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
@@ -15,7 +15,7 @@ import os
 import threading
 import time
 
-from past.builtins import basestring
+from past.builtins import basestring, long
 
 from frozendict import frozendict
 
@@ -30,6 +30,7 @@ from octoprint.util import comm as comm
 from octoprint.util import InvariantContainer
 from octoprint.util import to_unicode
 from octoprint.util import monotonic_time
+from octoprint.util import get_fully_qualified_classname as fqcn
 
 
 class Printer(PrinterInterface, comm.MachineComPrintCallback):
@@ -94,7 +95,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 				if estimator is not None:
 					self._logger.info("Using print time estimator provided by {}".format(name))
 					self._estimator_factory = estimator
-			except:
+			except Exception:
 				self._logger.exception("Error while processing analysis queues from {}".format(name),
 				                       extra=dict(plugin=name))
 
@@ -161,42 +162,51 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 
 	def register_callback(self, callback, *args, **kwargs):
 		if not isinstance(callback, PrinterCallback):
-			self._logger.warn("Registering an object as printer callback which doesn't implement the PrinterCallback interface")
-
+			self._logger.warning("Registering an object as printer callback which doesn't implement the PrinterCallback interface")
 		self._callbacks.append(callback)
-		self._sendInitialStateUpdate(callback)
 
 	def unregister_callback(self, callback, *args, **kwargs):
-		if callback in self._callbacks:
+		try:
 			self._callbacks.remove(callback)
+		except ValueError:
+			# not registered
+			pass
+
+	def send_initial_callback(self, callback):
+		if callback in self._callbacks:
+			self._sendInitialStateUpdate(callback)
 
 	def _sendAddTemperatureCallbacks(self, data):
 		for callback in self._callbacks:
 			try:
 				callback.on_printer_add_temperature(data)
-			except:
-				self._logger.exception(u"Exception while adding temperature data point to callback {}".format(callback))
+			except Exception:
+				self._logger.exception("Exception while adding temperature data point to callback {}".format(callback),
+				                       extra=dict(callback=fqcn(callback)))
 
 	def _sendAddLogCallbacks(self, data):
 		for callback in self._callbacks:
 			try:
 				callback.on_printer_add_log(data)
-			except:
-				self._logger.exception(u"Exception while adding communication log entry to callback {}".format(callback))
+			except Exception:
+				self._logger.exception("Exception while adding communication log entry to callback {}".format(callback),
+				                       extra=dict(callback=fqcn(callback)))
 
 	def _sendAddMessageCallbacks(self, data):
 		for callback in self._callbacks:
 			try:
 				callback.on_printer_add_message(data)
-			except:
-				self._logger.exception(u"Exception while adding printer message to callback {}".format(callback))
+			except Exception:
+				self._logger.exception("Exception while adding printer message to callback {}".format(callback),
+				                       extra=dict(callback=fqcn(callback)))
 
 	def _sendCurrentDataCallbacks(self, data):
 		for callback in self._callbacks:
 			try:
 				callback.on_printer_send_current_data(copy.deepcopy(data))
-			except:
-				self._logger.exception(u"Exception while pushing current data to callback {}".format(callback))
+			except Exception:
+				self._logger.exception("Exception while pushing current data to callback {}".format(callback),
+				                       extra=dict(callback=fqcn(callback)))
 
 	#~~ callback from metadata analysis event
 
@@ -230,7 +240,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			for plugin in self._progressPlugins:
 				try:
 					plugin.on_print_progress(storage, filename, progress)
-				except:
+				except Exception:
 					self._logger.exception("Exception while sending print progress to plugin %s" % plugin._identifier,
 					                       extra=dict(plugin=plugin._identifier))
 
@@ -341,7 +351,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			if not axis in PrinterInterface.valid_axes:
 				raise ValueError("Invalid axis {}, valid axes are {}".format(axis, ", ".join(PrinterInterface.valid_axes)))
 
-		command = "G1 {}".format(" ".join(["{}{}".format(axis.upper(), amount) for axis, amount in axes.items()]))
+		command = "G1 {}".format(" ".join(["{}{}".format(axis.upper(), amt) for axis, amt in axes.items()]))
 
 		if speed is None:
 			printer_profile = self._printerProfileManager.get_current_or_default()
@@ -359,12 +369,12 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 
 	def home(self, axes, *args, **kwargs):
 		if not isinstance(axes, (list, tuple)):
-			if isinstance(axes, (str, unicode)):
+			if isinstance(axes, basestring):
 				axes = [axes]
 			else:
 				raise ValueError("axes is neither a list nor a string: {axes}".format(axes=axes))
 
-		validated_axes = filter(lambda x: x in PrinterInterface.valid_axes, map(lambda x: x.lower(), axes))
+		validated_axes = list(filter(lambda x: x in PrinterInterface.valid_axes, map(lambda x: x.lower(), axes)))
 		if len(axes) != len(validated_axes):
 			raise ValueError("axes contains invalid axes: {axes}".format(axes=axes))
 
@@ -433,8 +443,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		if not isinstance(offsets, dict):
 			raise ValueError("offsets must be a dict")
 
-		validated_keys = filter(lambda x: PrinterInterface.valid_heater_regex.match(x), offsets.keys())
-		validated_values = filter(lambda x: isinstance(x, (int, long, float)), offsets.values())
+		validated_keys = list(filter(lambda x: PrinterInterface.valid_heater_regex.match(x), offsets.keys()))
+		validated_values = list(filter(lambda x: isinstance(x, (int, long, float)), offsets.values()))
 
 		if len(validated_keys) != len(offsets):
 			raise ValueError("offsets contains invalid keys: {offsets}".format(offsets=offsets))
@@ -484,14 +494,18 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			path_on_disk = self._fileManager.path_on_disk(origin, path)
 			path_in_storage = self._fileManager.path_in_storage(origin, path_on_disk)
 
-		recovery_data = self._fileManager.get_recovery_data()
-		if recovery_data:
-			# clean up recovery data if we just selected a different file than is logged in that
-			actual_origin = recovery_data.get("origin", None)
-			actual_path = recovery_data.get("path", None)
+		try:
+			recovery_data = self._fileManager.get_recovery_data()
+			if recovery_data:
+				# clean up recovery data if we just selected a different file
+				actual_origin = recovery_data.get("origin", None)
+				actual_path = recovery_data.get("path", None)
 
-			if actual_origin is None or actual_path is None or actual_origin != origin or actual_path != path_in_storage:
-				self._fileManager.delete_recovery_data()
+				if actual_origin is None or actual_path is None or actual_origin != origin or actual_path != path_in_storage:
+					self._fileManager.delete_recovery_data()
+		except Exception:
+			# anything goes wrong with the recovery data, we ignore it
+			self._logger.exception("Something was wrong with processing the recovery data")
 
 		self._printAfterSelect = printAfterSelect
 		self._posAfterSelect = pos
@@ -706,7 +720,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 	def get_sd_files(self, *args, **kwargs):
 		if self._comm is None or not self._comm.isSdReady():
 			return []
-		return map(lambda x: (x[0][1:], x[1]), self._comm.getSdFiles())
+		return list(map(lambda x: (x[0][1:], x[1]), self._comm.getSdFiles()))
 
 	def add_sd_file(self, filename, path, on_success=None, on_failure=None, *args, **kwargs):
 		if not self._comm or self._comm.isBusy() or not self._comm.isSdReady():
@@ -743,7 +757,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 				              *args, **kwargs)
 				if result is not None:
 					return result
-			except:
+			except Exception:
 				self._logger.exception("There was an error running the sd upload "
 				                       "hook provided by plugin {}".format(name),
 				                       extra=dict(plugin=name))
@@ -754,7 +768,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 
 	def _get_free_remote_name(self, filename):
 		self.refresh_sd_files(blocking=True)
-		existingSdFiles = map(lambda x: x[0], self._comm.getSdFiles())
+		existingSdFiles = list(map(lambda x: x[0], self._comm.getSdFiles()))
 
 		if valid_file_type(filename, "gcode"):
 			# figure out remote filename
@@ -983,7 +997,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 
 				try:
 					fileData = self._fileManager.get_metadata(FileDestinations.SDCARD if sd else FileDestinations.LOCAL, path_on_disk)
-				except:
+				except Exception:
+					self._logger.exception("Error generating fileData")
 					fileData = None
 				if fileData is not None:
 					if "display" in fileData:
@@ -991,7 +1006,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 					if "analysis" in fileData:
 						if estimatedPrintTime is None and "estimatedPrintTime" in fileData["analysis"]:
 							estimatedPrintTime = fileData["analysis"]["estimatedPrintTime"]
-						if "filament" in fileData["analysis"].keys():
+						if "filament" in fileData["analysis"]:
 							filament = fileData["analysis"]["filament"]
 					if "statistics" in fileData:
 						printer_profile = self._printerProfileManager.get_current_or_default()["id"]
@@ -1032,7 +1047,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 				self._stateMonitor.set_job_data(self._dict(file=job_data["file"],
 				                                           estimatedPrintTime=job_data["estimatedPrintTime"],
 				                                           averagePrintTime=job_data["averagePrintTime"],
-				                                           lastPrintTIme=job_data["lastPrintTime"],
+				                                           lastPrintTime=job_data["lastPrintTime"],
 				                                           filament=job_data["filament"],
 				                                           user=user,
 				                                           transId=transId))
@@ -1046,8 +1061,9 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 				"messages": list(self._messages)
 			})
 			callback.on_printer_send_initial_data(data)
-		except:
-			self._logger.exception("Error while trying to send initial state update")
+		except Exception:
+			self._logger.exception(u"Error while pushing initial state update to callback {}".format(callback),
+			                       extra=dict(callback=fqcn(callback)))
 
 	def _getStateFlags(self):
 		return self._dict(operational=self.is_operational(),
@@ -1114,7 +1130,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			self._analysisQueue.resume() # printing done, put those cpu cycles to good use
 
 		elif state == comm.MachineCom.STATE_PRINTING:
-			self._analysisQueue.pause() # do not analyse files while printing
+			if settings().get(["gcodeAnalysis", "runAt"]) == "idle":
+				self._analysisQueue.pause() # only analyse files while idle
 
 		if state == comm.MachineCom.STATE_CLOSED or state == comm.MachineCom.STATE_CLOSED_WITH_ERROR:
 			if self._comm is not None:
@@ -1362,7 +1379,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			self._fileManager.save_recovery_data(origin, name, pos)
 		except NoSuchStorage:
 			pass
-		except:
+		except Exception:
 			self._logger.exception("Error while trying to persist print recovery data")
 
 	def _payload_for_print_job_event(self, location=None, print_job_file=None, print_job_size=None, print_job_user=None,
@@ -1397,11 +1414,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		result= dict(name=name,
 		             path=path,
 		             origin=origin,
-		             size=print_job_size,
-
-		             # TODO deprecated, remove in 1.4.0
-		             file=full_path,
-		             filename=name)
+		             size=print_job_size)
 
 		if position is not None:
 			result["position"] = position
@@ -1511,7 +1524,7 @@ class StateMonitor(object):
 					self._update_callback(data)
 					self._last_update = monotonic_time()
 					self._change_event.clear()
-		except:
+		except Exception:
 			logging.getLogger(__name__).exception("Looks like something crashed inside the state update worker. Please report this on the OctoPrint issue tracker (make sure to include logs!)")
 
 	def get_current_data(self):

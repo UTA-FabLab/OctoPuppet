@@ -5,6 +5,7 @@ $(function() {
         var paused;
         self.loginState = parameters[0];
         self.settings = parameters[1];
+        self.access = parameters[2];
 
         self.stateString = ko.observable(undefined);
         self.isErrorOrClosed = ko.observable(undefined);
@@ -18,22 +19,41 @@ $(function() {
         self.isLoading = ko.observable(undefined);
         self.isSdReady = ko.observable(undefined);
 
+        self.isBusy = ko.pureComputed(function() {
+            return self.isPrinting() || self.isCancelling() || self.isPausing() || self.isPaused();
+        });
+
         self.enablePrint = ko.pureComputed(function() {
-            return self.isOperational() && self.isReady() && !self.isPrinting() && !self.isCancelling() && !self.isPausing() && self.loginState.isUser() && self.filename();
+            return self.isOperational() &&
+                self.isReady() &&
+                !self.isPrinting() &&
+                !self.isCancelling() &&
+                !self.isPausing() &&
+                self.loginState.hasPermission(self.access.permissions.PRINT) &&
+                self.filename();
         });
         self.enablePause = ko.pureComputed(function() {
-            return self.isOperational() && (self.isPrinting() || self.isPaused()) && !self.isCancelling() && !self.isPausing() && self.loginState.isUser();
+            return self.isOperational() &&
+                (self.isPrinting() || self.isPaused()) &&
+                !self.isCancelling() &&
+                !self.isPausing() &&
+                self.loginState.hasPermission(self.access.permissions.PRINT);
         });
         self.enableCancel = ko.pureComputed(function() {
-            return self.isOperational() && (self.isPrinting() || self.isPaused()) && !self.isCancelling() && !self.isPausing() && self.loginState.isUser();
+            return self.isOperational() &&
+                (self.isPrinting() || self.isPaused()) &&
+                !self.isCancelling() &&
+                !self.isPausing() &&
+                self.loginState.loggedIn();
         });
 
         self.filename = ko.observable(undefined);
         self.filepath = ko.observable(undefined);
         self.filedisplay = ko.observable(undefined);
-        self.progress = ko.observable(undefined);
         self.filesize = ko.observable(undefined);
         self.filepos = ko.observable(undefined);
+        self.filedate = ko.observable(undefined);
+        self.progress = ko.observable(undefined);
         self.printTime = ko.observable(undefined);
         self.printTimeLeft = ko.observable(undefined);
         self.printTimeLeftOrigin = ko.observable(undefined);
@@ -64,7 +84,7 @@ $(function() {
             if (self.estimatedPrintTime())
                 return fmt(self.estimatedPrintTime());
             return "-";
-        }
+        };
         self.estimatedPrintTimeString = ko.pureComputed(function() {
             return estimatedPrintTimeStringHlpr(self.settings.appearance_fuzzyTimes() ? formatFuzzyPrintTime : formatDuration);
         });
@@ -97,7 +117,7 @@ $(function() {
             } else {
                 return fmt(self.printTimeLeft());
             }
-        }
+        };
         self.printTimeLeftString = ko.pureComputed(function() {
             return printTimeLeftStringHlpr(self.settings.appearance_fuzzyTimes() ? formatFuzzyPrintTime : formatDuration);
         });
@@ -173,9 +193,9 @@ $(function() {
                 return "-";
 
             var type = timelapse["type"];
-            if (type == "zchange") {
+            if (type === "zchange") {
                 return gettext("On Z Change");
-            } else if (type == "timed") {
+            } else if (type === "timed") {
                 return gettext("Timed") + " (" + timelapse["options"]["interval"] + " " + gettext("sec") + ")";
             } else {
                 return "-";
@@ -203,6 +223,15 @@ $(function() {
 
             var file = self.filename();
             return (user ? user : (file ? "-" : ""));
+        });
+
+        self.dateString = ko.pureComputed(function() {
+            var date = self.filedate();
+            if (!date) {
+                return "";
+            }
+
+            return formatDate(date, {seconds:true});
         });
 
         self.fromCurrentData = function(data) {
@@ -239,7 +268,7 @@ $(function() {
             self.isReady(data.flags.ready);
             self.isSdReady(data.flags.sdReady);
 
-            if (self.isPaused() != prevPaused) {
+            if (self.isPaused() !== prevPaused) {
                 if (self.isPaused()) {
                     self.titlePrintButton(self.TITLE_PRINT_BUTTON_PAUSED);
                     self.titlePauseButton(self.TITLE_PAUSE_BUTTON_PAUSED);
@@ -256,12 +285,14 @@ $(function() {
                 self.filepath(data.file.path);
                 self.filesize(data.file.size);
                 self.filedisplay(data.file.display);
-                self.sd(data.file.origin == "sdcard");
+                self.filedate(data.file.date);
+                self.sd(data.file.origin === "sdcard");
             } else {
                 self.filename(undefined);
                 self.filepath(undefined);
                 self.filesize(undefined);
                 self.filedisplay(undefined);
+                self.filedate(undefined);
                 self.sd(undefined);
             }
 
@@ -269,7 +300,7 @@ $(function() {
             self.lastPrintTime(data.lastPrintTime);
 
             var result = [];
-            if (data.filament && typeof(data.filament) == "object" && _.keys(data.filament).length > 0) {
+            if (data.filament && typeof(data.filament) === "object" && _.keys(data.filament).length > 0) {
                 var keys = _.keys(data.filament);
                 keys.sort();
                 _.each(keys, function(key) {
@@ -330,30 +361,25 @@ $(function() {
         };
 
         self.cancel = function() {
-            $("#cancelIdModal").modal('show');
-            console.log("Showing kill confirm modal");
-            $("#cancelIdModal").on('shown', function () {
-                $("#studentId1").val('');
-                $("#studentId2").val('');
-                $("#studentId2").focus();
-                $("#studentIdVerification2").attr("disabled", "disabled");
-            });
-
-            $("#studentIdVerification2").unbind("click").on("click", function () {
-                if ($("#studentId2").val().length != 10) {
-                    return false;
-                }
-                else {
-                    OctoPrint.job.cancel();
-                    endTransaction();
-                }
-            });
+            if (!self.settings.feature_printCancelConfirmation()) {
+                OctoPrint.job.cancel();
+            } else {
+                showConfirmationDialog({
+                    message: gettext("This will cancel your print."),
+                    cancel: gettext("No"),
+                    proceed: gettext("Yes"),
+                    onproceed: function() {
+                        OctoPrint.job.cancel();
+                    },
+                    nofade: true
+                });
+            }
         };
     }
 
     OCTOPRINT_VIEWMODELS.push({
         construct: PrinterStateViewModel,
-        dependencies: ["loginStateViewModel", "settingsViewModel"],
+        dependencies: ["loginStateViewModel", "settingsViewModel", "accessViewModel"],
         elements: ["#state_wrapper", "#drop_overlay"]
     });
 });

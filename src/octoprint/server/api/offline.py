@@ -22,12 +22,12 @@ from octoprint.server.api import api
 from octoprint.server import printer
 
 basedir = settings().getBaseFolder("FabAppData")
-faUrl = settings().get(["fabapp", "url"])
+faUrl = settings().get(["fabapp", "faUrl"])
 faDevice = {
-	'device_id': str(settings().get(["fabapp", "device_id"]))
+	'device_id': str(settings().get(["fabapp", "faDev"]))
 	}
 faHeaders = {
-	'authorization': settings().get(["fabapp", "api_key"])
+	'authorization': settings().get(["fabapp", "faKey"])
 	}
 
 faPayload = faDevice.copy()

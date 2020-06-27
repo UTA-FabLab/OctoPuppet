@@ -444,9 +444,9 @@ default_settings = {
 		}
 	},
 	"fabapp": {
-		"device_id": None,
-		"flud_api_key": None,
-		"flud_url": None
+		"faDev": None,
+		"faKey": None,
+		"faUrl": None
 	}
 }
 """The default settings of the core application."""

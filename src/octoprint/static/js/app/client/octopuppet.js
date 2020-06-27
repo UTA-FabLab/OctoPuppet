@@ -168,7 +168,7 @@ function OctoPuppet(file, paused) {
 function endTransaction() {
     postBody = { type:"update_end_time" }
     $.ajax({
-        url: API_BASEURL + "FabAppData/end",
+        url: API_BASEURL + "FabAppData/endTrans",
         headers: { 'X-Api-Key': 'UTALab16' },
         type: "POST",
         contentType: "application/json; charset=UTF-8",

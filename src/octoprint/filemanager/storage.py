@@ -767,6 +767,8 @@ class LocalFileStorage(StorageInterface):
 			raise StorageError("{name} does already exist in {path} and overwriting is prohibited".format(**locals()), code=StorageError.ALREADY_EXISTS)
 
 		# search file for kisslicer analysis lines
+		build_time = None
+		build_mat_used = None
 		try:
 			for l in file_object.stream():
 				line = l.decode('utf-8')
@@ -775,7 +777,7 @@ class LocalFileStorage(StorageInterface):
 				if 'Ext 1' in line:
 					build_mat_used = line
 		except Exception as e:
-			build_time = "errored during build time search"
+			print("Missing metadata data.")
 			raise e
 
 		# make sure folders exist
@@ -796,9 +798,9 @@ class LocalFileStorage(StorageInterface):
 			metadata_dirty = True
 
 		# if kisslicer build time estimate was found, convert to a mysql time compatible unit and store
-		if build_time:
-			re1='.*?'	# Non-greedy match on filler
-			re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+		if build_time is not None:
+			re1= '.*?'	# Non-greedy match on filler
+			re2= '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
 
 			rg = re.compile(re1+re2,re.IGNORECASE|re.DOTALL)
 			m = rg.search(build_time)
@@ -813,23 +815,27 @@ class LocalFileStorage(StorageInterface):
 				metadata["est_build_time"] = build_time_str
 				metadata_dirty = True
 		else:
-			pass
+			print("WARNING - Missing print time data. Setting to 00:00:00")
+			build_time_str = str("00:00:00")
+			metadata["est_build_time"] = build_time_str
+			metadata_dirty = True
 
 		# if kisslicer materials used estimates were found, capture and store
-		if build_mat_used:
-			re1='.*?'	# Non-greedy match on filler
-			re2='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
-			re3='.*?'	# Non-greedy match on filler
-			re4='([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 2
+		if build_mat_used is not None:
+			re1= '.*?'	# Non-greedy match on filler
+			re2= '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 1
+			re3= '.*?'	# Non-greedy match on filler
+			re4= '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'	# Float 2
 
 			rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
 			m = rg.search(build_mat_used)
 			if m:
-				metadata["est_flmnt_len"] = m.group(1)
 				metadata["est_flmnt_vol"] = m.group(2)
 				metadata_dirty = True
 		else:
-			pass
+			print("WARNING - Missing material used data. Setting to 0")
+			metadata["est_flmnt_vol"] = 0
+			metadata_dirty = True
 
 		if not "display" in metadata and display_name != name:
 			# display name is not the same as file name -> store in metadata

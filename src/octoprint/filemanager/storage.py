@@ -768,7 +768,8 @@ class LocalFileStorage(StorageInterface):
 
 		# search file for kisslicer analysis lines
 		try:
-			for line in file_object.stream():
+			for l in file_object.stream():
+				line = l.decode('utf-8')
 				if 'Estimated Build Time:' in line:
 					build_time = line
 				if 'Ext 1' in line:

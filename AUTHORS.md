@@ -121,6 +121,7 @@ date of first contribution):
   * [Josh Friend](https://github.com/joshfriend)
   * [Lachlan Cresswell](https://github.com/lachyc)
   * [Khoi Pham](https://github.com/osubuu)
+  * [Timofei Korostelev](https://github.com/chudsaviet)
   * [Federico Nembrini](https://github.com/FedericoNembrini)
   * [Brian Vanderbusch](https://github.com/LongLiveCHIEF)
   * [Uri Shaked](https://github.com/urish)

@@ -3550,6 +3550,7 @@ class MachineCom(object):
 	@property
 	def _checksum_enabled(self):
 		return not self._neverSendChecksum and ((self.isPrinting() and self._currentFile and self._currentFile.checksum) or
+		                                        self._manualStreaming or
 		                                        self._alwaysSendChecksum or
 		                                        not self._firmware_info_received)
 

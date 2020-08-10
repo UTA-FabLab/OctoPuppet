@@ -115,6 +115,70 @@ def _cache_key(ui, url=None, locale=None, additional_key_data=None):
 def _valid_status_for_cache(status_code):
 	return 200 <= status_code < 400
 
+def _add_additional_assets(hook):
+	result = []
+	for name, hook in pluginManager.get_hooks(hook).items():
+		try:
+			assets = hook()
+			if isinstance(assets, (tuple, list)):
+				result += assets
+		except:
+			_logger.exception("Error fetching theming CSS to include from plugin {}".format(name),
+			                  extra=dict(plugin=name))
+	return result
+
+@app.route("/login")
+@app.route("/login/")
+def login():
+	from flask_login import current_user
+
+	redirect_url = request.args.get("redirect", request.script_root + url_for("index"))
+	permissions = sorted(filter(lambda x: x is not None and isinstance(x, OctoPrintPermission),
+	                            map(lambda x: getattr(Permissions, x.strip()),
+	                                request.args.get("permissions", "").split(","))),
+	                     key=lambda x: x.get_name())
+	if not permissions:
+		permissions = [Permissions.STATUS, Permissions.SETTINGS_READ]
+
+	if all(map(lambda p: p.can(), permissions)):
+		return redirect(redirect_url)
+
+	render_kwargs = dict(theming=[],
+	                     redirect_url=redirect_url,
+	                     permission_names=map(lambda x: x.get_name(), permissions),
+	                     logged_in=not current_user.is_anonymous)
+
+	try:
+		additional_assets = _add_additional_assets("octoprint.theming.login")
+
+		# backwards compatibility to forcelogin & loginui plugins which were replaced by this built-in dialog
+		additional_assets += _add_additional_assets("octoprint.plugin.forcelogin.theming")
+		additional_assets += _add_additional_assets("octoprint.plugin.loginui.theming")
+
+		render_kwargs.update(dict(theming=additional_assets))
+	except:
+		_logger.exception("Error processing theming CSS, ignoring")
+
+	return render_template("login.jinja2", **render_kwargs)
+
+@app.route("/recovery")
+@app.route("/recovery/")
+def recovery():
+	if not Permissions.ADMIN.can():
+		return redirect(url_for("login",
+		                        redirect=request.script_root + request.full_path,
+		                        permissions=Permissions.ADMIN.key))
+
+	render_kwargs = dict(theming=[])
+
+	try:
+		additional_assets = _add_additional_assets("octoprint.theming.recovery")
+		render_kwargs.update(dict(theming=additional_assets))
+	except:
+		_logger.exception("Error processing theming CSS, ignoring")
+
+	return render_template("recovery.jinja2", **render_kwargs)
+
 @app.route("/cached.gif")
 def in_cache():
 	url = request.base_url.replace("/cached.gif", "/")
@@ -166,6 +230,15 @@ def in_cache():
 @app.route("/")
 def index():
 	from octoprint.server import printer
+
+	if request.headers.get("X-Preemptive-Recording", "no") == "no" \
+		and userManager.enabled \
+		and userManager.has_been_customized():
+		if not (Permissions.STATUS.can() and Permissions.SETTINGS_READ.can()):
+			return redirect(url_for("login",
+			                        redirect=request.script_root + request.full_path,
+			                        permissions=",".join([Permissions.STATUS.key,
+			                                              Permissions.SETTINGS_READ.key])))
 
 	global _templates, _plugin_names, _plugin_vars
 

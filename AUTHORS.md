@@ -126,6 +126,7 @@ date of first contribution):
   * [Uri Shaked](https://github.com/urish)
   * [Ollis Git](https://github.com/OllisGit)
   * [Charlie Powell](https://github.com/cp2004)
+  * [Ollis Git](https://github.com/OllisGit)
 
 OctoPrint started off as a fork of [Cura](https://github.com/daid/Cura) by
 [Daid Braam](https://github.com/daid). Parts of its communication layer and

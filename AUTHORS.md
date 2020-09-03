@@ -124,6 +124,7 @@ date of first contribution):
   * [Federico Nembrini](https://github.com/FedericoNembrini)
   * [Brian Vanderbusch](https://github.com/LongLiveCHIEF)
   * [Uri Shaked](https://github.com/urish)
+  * [Charlie Powell](https://github.com/cp2004)
   * [Ollis Git](https://github.com/OllisGit)
   * [Charlie Powell](https://github.com/cp2004)
   * [Ollis Git](https://github.com/OllisGit)

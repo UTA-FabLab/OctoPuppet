@@ -124,6 +124,7 @@ date of first contribution):
   * [Federico Nembrini](https://github.com/FedericoNembrini)
   * [Brian Vanderbusch](https://github.com/LongLiveCHIEF)
   * [Uri Shaked](https://github.com/urish)
+  * [Ollis Git](https://github.com/OllisGit)
 
 OctoPrint started off as a fork of [Cura](https://github.com/daid/Cura) by
 [Daid Braam](https://github.com/daid). Parts of its communication layer and

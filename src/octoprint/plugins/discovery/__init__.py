@@ -141,16 +141,15 @@ class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
 		self.port = port
 
 		# Zeroconf
-		self.zeroconf_register("_http._tcp", self.get_instance_name(), txt_record=self._create_http_txt_record_dict())
-		self.zeroconf_register("_octoprint._tcp", self.get_instance_name(), txt_record=self._create_octoprint_txt_record_dict())
-		for zeroconf in self._settings.get(["zeroConf"]):
-			if "service" in zeroconf:
-				self.zeroconf_register(
-					zeroconf["service"],
-					zeroconf["name"] if "name" in zeroconf else self.get_instance_name(),
-					port=zeroconf["port"] if "port" in zeroconf else None,
-					txt_record=zeroconf["txtRecord"] if "txtRecord" in zeroconf else None
-				)
+		instance_name = self.get_instance_name()
+		self.zeroconf_register("_http._tcp", instance_name, txt_record=self._create_http_txt_record_dict())
+		self.zeroconf_register("_octoprint._tcp", instance_name, txt_record=self._create_octoprint_txt_record_dict())
+		for zc in self._settings.get(["zeroConf"]):
+			if "service" in zc:
+				self.zeroconf_register(zc["service"],
+				                       zc.get("name", instance_name),
+				                       port=zc.get("port"),
+				                       txt_record=zc.get("txtRecord"))
 
 		# SSDP
 		self._ssdp_register()
@@ -168,6 +167,27 @@ class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
 	##~~ helpers
 
 	# ZeroConf
+
+	def _format_zeroconf_service_type(self, service_type):
+		service_type = octoprint.util.to_native_str(service_type)
+		if not service_type.endswith(octoprint.util.to_native_str(".")):
+			service_type += octoprint.util.to_native_str(".")
+		if not service_type.endswith(octoprint.util.to_native_str("local.")):
+			service_type += octoprint.util.to_native_str("local.")
+		return service_type
+
+	def _format_zeroconf_name(self, name, service_type):
+		service_type = self._format_zeroconf_service_type(service_type)
+		return octoprint.util.to_native_str(name) + octoprint.util.to_native_str(".") + service_type
+
+	def _format_zeroconf_txt(self, record):
+		result = {}
+		if not record:
+			return result
+
+		for key, value in record.items():
+			result[octoprint.util.to_bytes(key)] = octoprint.util.to_bytes(value)
+		return result
 
 	def zeroconf_register(self, reg_type, name=None, port=None, txt_record=None):
 		"""
@@ -517,23 +537,22 @@ class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
 
 		:return: a dictionary containing the defined key-value-pairs, ready to be turned into a TXT record
 		"""
-
-		entries = self._create_http_txt_record_dict()
-
 		import octoprint.server
 		import octoprint.server.api
 
-		entries.update(dict(
+		entries = self._create_http_txt_record_dict()
+		entries.update(
 			version=octoprint.server.VERSION,
 			api=octoprint.server.api.VERSION,
-			))
+			uuid=self.get_uuid()
+		)
 
 		modelName = self._settings.get(["model", "name"])
 		if modelName:
-			entries.update(dict(model=modelName))
+			entries.update(model=modelName)
 		vendor = self._settings.get(["model", "vendor"])
 		if vendor:
-			entries.update(dict(vendor=vendor))
+			entries.update(vendor=vendor)
 
 		return entries
 

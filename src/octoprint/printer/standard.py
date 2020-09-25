@@ -12,6 +12,7 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 import copy
 import logging
 import os
+import requests, requests.exceptions
 import threading
 import time
 
@@ -32,6 +33,21 @@ from octoprint.util import to_unicode
 from octoprint.util import monotonic_time
 from octoprint.util import get_fully_qualified_classname as fqcn
 
+faUrl = settings().get(["fabapp", "faUrl"])
+faDevice = {
+	'device_id': str(settings().get(["fabapp", "faDev"]))
+	}
+faHeaders = {
+	'authorization': settings().get(["fabapp", "faKey"])
+	}
+
+faPayload = faDevice.copy()
+
+def endtransaction():
+	print("Ending Ticket")
+	faPayload['type'] = "update_end_time"
+	r = requests.request("POST", faUrl + "api/flud.php", json=faPayload, headers=faHeaders, timeout=0.5)
+	print(r.json())
 
 class Printer(PrinterInterface, comm.MachineComPrintCallback):
 	"""
@@ -1315,6 +1331,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 		else:
 			self._updateProgressData()
 			self._stateMonitor.set_state(self._dict(text=self.get_state_string(), flags=self._getStateFlags()))
+		
+		endtransaction()
 
 
 	def on_comm_print_job_cancelling(self, firmware_error=None, user=None):
@@ -1359,6 +1377,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
 			thread = threading.Thread(target=finalize)
 			thread.daemon = True
 			thread.start()
+		
+		endtransaction()
 
 	def on_comm_print_job_paused(self, suppress_script=False, user=None):
 		payload = self._payload_for_print_job_event(position=self._comm.pause_position.as_dict() if self._comm and self._comm.pause_position and not suppress_script else None,

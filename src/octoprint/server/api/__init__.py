@@ -239,6 +239,7 @@ def login():
 					g.user = user
 				login_user(user, remember=remember)
 				identity_changed.send(current_app._get_current_object(), identity=Identity(user.get_id()))
+				session["login_mechanism"] = "http"
 
 				remote_addr = get_remote_address(request)
 				logging.getLogger(__name__).info("Actively logging in user {} from {}".format(user.get_id(), remote_addr))
@@ -247,6 +248,7 @@ def login():
 				response["_is_external_client"] = s().getBoolean(["server", "ipCheck", "enabled"]) \
 				                                  and not util_net.is_lan_address(remote_addr,
 				                                                                  additional_private=s().get(["server", "ipCheck", "trustedSubnets"]))
+				response["_login_mechanism"] = session["login_mechanism"]
 
 				r = make_response(jsonify(response))
 				r.delete_cookie("active_logout")
@@ -288,6 +290,8 @@ def logout():
 def _logout(user):
 	if "usersession.id" in session:
 		del session["usersession.id"]
+	if "login_mechanism" in session:
+		del session["login_mechanism"]
 	octoprint.server.userManager.logout_user(user)
 
 

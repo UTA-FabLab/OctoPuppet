@@ -46,15 +46,10 @@ def __plugin_load__():
 	__plugin_implementation__ = plugin
 
 	global __plugin_helpers__
-	__plugin_helpers__ = dict(
-		ssdp_browse=plugin.ssdp_browse
-	)
-	if pybonjour:
-		__plugin_helpers__.update(dict(
-			zeroconf_browse=plugin.zeroconf_browse,
-			zeroconf_register=plugin.zeroconf_register,
-			zeroconf_unregister=plugin.zeroconf_unregister
-		))
+	__plugin_helpers__ = {"ssdp_browse": plugin.ssdp_browse,
+	                      "zeroconf_browse": plugin.zeroconf_browse,
+	                      "zeroconf_register": plugin.zeroconf_register,
+	                      "zeroconf_unregister": plugin.zeroconf_unregister}
 
 class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
                       octoprint.plugin.ShutdownPlugin,
@@ -318,50 +313,30 @@ class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
 		result_available = threading.Event()
 		result_available.clear()
 
-		resolved = []
+		class ZeroconfListener(object):
+			def __init__(self, logger):
+				self._logger = logger
 
-		def resolve_callback(sd_ref, flags, interface_index, error_code, fullname, hosttarget, port, txt_record):
-			if error_code == pybonjour.kDNSServiceErr_NoError:
-				txt_record_dict = None
-				if txt_record:
-					record = pybonjour.TXTRecord.parse(txt_record)
-					txt_record_dict = dict()
-					for key, value in record:
-						txt_record_dict[key] = value
+			def add_service(self, zeroconf, type, name):
+				self._logger.debug("Got a browsing result for Zeroconf resolution of {}, resolving...".format(type))
+				info = zeroconf.get_service_info(type, name, timeout=resolve_timeout * 1000)
+				if info:
+					def to_result(info, address):
+						n = info.name[:-(len(type) + 1)]
+						p = info.port
 
-				name = fullname[:fullname.find(service_type) - 1].replace("\\032", " ")
-				host = hosttarget[:-1]
+						self._logger.debug("Resolved a result for Zeroconf resolution of {}: {} @ {}:{}".format(type,
+						                                                                                        n,
+						                                                                                        address,
+						                                                                                        p))
 
-				self._logger.debug("Resolved a result for Zeroconf resolution of {service_type}: {name} @ {host}".format(service_type=service_type, name=name, host=host))
-				result.append(dict(
-					name=name,
-					host=host,
-					port=port,
-					txt_record=txt_record_dict
-				))
-				resolved.append(True)
+						return {"name": n,
+						        "host": address,
+						        "port": p,
+						        "txt_record": info.properties}
 
-		def browse_callback(sd_ref, flags, interface_index, error_code, service_name, regtype, reply_domain):
-			if error_code != pybonjour.kDNSServiceErr_NoError:
-				return
-
-			if not (flags & pybonjour.kDNSServiceFlagsAdd):
-				return
-
-			self._logger.debug("Got a browsing result for Zeroconf resolution of {service_type}, resolving...".format(service_type=service_type))
-			resolve_ref = pybonjour.DNSServiceResolve(0, interface_index, service_name, regtype, reply_domain, resolve_callback)
-
-			try:
-				while not resolved:
-					ready = select.select([resolve_ref], [], [], resolve_timeout)
-					if resolve_ref not in ready[0]:
-						break
-
-					pybonjour.DNSServiceProcessResult(resolve_ref)
-				else:
-					resolved.pop()
-			finally:
-				resolve_ref.close()
+					for address in map(lambda x: socket.inet_ntoa(x), info.addresses):
+						result.append(to_result(info, address))
 
 		self._logger.debug("Browsing Zeroconf for {service_type}".format(service_type=service_type))
 
@@ -525,12 +500,10 @@ class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
 		username = self._settings.get(["httpUsername"])
 		password = self._settings.get(["httpPassword"])
 
-		entries = dict(
-			path=path
-		)
+		entries = {"path": path}
 
 		if username and password:
-			entries.update(dict(u=username, p=password))
+			entries.update({"u": username, "p": password})
 
 		return entries
 
@@ -580,7 +553,8 @@ class DiscoveryPlugin(octoprint.plugin.StartupPlugin,
 
 		self._ssdp_monitor_active = True
 
-		self._ssdp_monitor_thread = threading.Thread(target=self._ssdp_monitor, kwargs=dict(timeout=self._ssdp_notify_timeout))
+		self._ssdp_monitor_thread = threading.Thread(target=self._ssdp_monitor,
+		                                             kwargs={"timeout": self._ssdp_notify_timeout})
 		self._ssdp_monitor_thread.daemon = True
 		self._ssdp_monitor_thread.start()
 

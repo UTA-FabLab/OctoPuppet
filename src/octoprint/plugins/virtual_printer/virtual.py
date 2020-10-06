@@ -85,7 +85,7 @@ class VirtualPrinter(object):
 		self.extruderCount = self._settings.get_int(["numExtruders"])
 		self.pinnedExtruders = self._settings.get(["pinnedExtruders"])
 		if self.pinnedExtruders is None:
-			self.pinnedExtruders = dict()
+			self.pinnedExtruders = {}
 		self.sharedNozzle = self._settings.get_boolean(["sharedNozzle"])
 		self.temperatureCount = (1 if self.sharedNozzle else self.extruderCount)
 
@@ -158,8 +158,8 @@ class VirtualPrinter(object):
 
 		self._debug_awol = False
 		self._debug_sleep = 0
-		self._sleepAfterNext = dict()
-		self._sleepAfter = dict()
+		self._sleepAfterNext = {}
+		self._sleepAfter = {}
 		self._rerequest_last = False
 
 		self._dont_answer = False
@@ -1004,6 +1004,19 @@ class VirtualPrinter(object):
 		for item in items:
 			self._send(item)
 		self._send("End file list")
+
+	def _mappedSdList(self):
+		# type: () -> collections.OrderedDict
+		result = collections.OrderedDict()
+		for entry in scandir(self._virtualSd):
+			if not entry.is_file():
+				continue
+			dosname = get_dos_filename(entry.name, existing_filenames=list(result.keys())).lower()
+			result[dosname] = {"name": entry.name,
+			                   "path": entry.path,
+			                   "dosname": dosname,
+			                   "size": entry.stat().st_size}
+		return result
 
 	def _selectSdFile(self, filename, check_already_open=False):
 		# type: (str, bool) -> None

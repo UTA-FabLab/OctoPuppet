@@ -3,12 +3,14 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import io
-import sys
 import logging as log
+import os
+import sys
+
+from ._version import get_versions
 
 # ~~ version
 
-from ._version import get_versions
 
 versions = get_versions()
 
@@ -20,7 +22,9 @@ __revision__ = versions.get("full-revisionid", versions.get("full", None))
 del versions
 del get_versions
 
-#~~ try to ensure a sound SSL environment
+# figure out current umask - sadly only doable by setting a new one and resetting it, no query method
+UMASK = os.umask(0)
+os.umask(UMASK)
 
 urllib3_ssl = True
 """Whether requests/urllib3 and urllib3 (if installed) should be able to establish
@@ -219,7 +223,7 @@ def init_platform(
 def init_settings(basedir, configfile):
     """Inits the settings instance based on basedir and configfile to use."""
 
-    from octoprint.settings import settings, InvalidSettings
+    from octoprint.settings import InvalidSettings, settings
 
     try:
         return settings(init=True, basedir=basedir, configfile=configfile)
@@ -559,9 +563,10 @@ def init_pluginsystem(
 
 
 def get_plugin_blacklist(settings, connectivity_checker=None):
-    import requests
     import os
     import time
+
+    import requests
     import yaml
 
     from octoprint.util import bom_aware_open

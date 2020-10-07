@@ -13,8 +13,8 @@ below.
 
   * Prerequisites:
 
-    * `Python 3.7 <https://python.org>`_ including ``pip``, ``setuptools`` and ``virtualenv``
     * `Python 2.7 <https://python.org>`_ including ``pip``, ``setuptools`` and ``virtualenv``
+    * `Python 3.7 <https://python.org>`_ including ``pip``, ``setuptools`` and ``virtualenv``
     * `Git <https://git-scm.com>`_
 
   * Checkout the OctoPrint sources from their Git repository:
@@ -26,8 +26,8 @@ below.
     installing and running OctoPrint and its dependencies. Creating virtual environments avoids potential versioning
     issues for the dependencies with system wide installed instances:
 
-    * PY3: ``virtualenv --python=python3 venv3``
     * PY2: ``virtualenv --python=python2 venv2``
+    * PY3: ``virtualenv --python=python3 venv3``
 
     .. note::
 
@@ -54,16 +54,12 @@ below.
 
       * ``pre-commit install``
 
-  * Tell ``git`` where to find the file with revisions to exclude for ``git blame``:
-
-      * ``git config blame.ignoreRevsFile .git-blame-ignore-revs``
-
 When the virtual environment is activated you can then:
 
   * run the OctoPrint server via ``octoprint serve``
   * run the test suite from the checked out source folder via ``pytest``
   * trigger the pre-commit check suite manually from the checked out source folder via
-    ``pre-commit run --hook-stage manual --all-files``
+    ``pre-commit run --all-files``
 
 To switch the activated virtual environment, simply activate the new environment as described above.
 
@@ -118,7 +114,6 @@ Then:
    pip install --upgrade pip
    pip install -e .[develop,plugins,docs]
    pre-commit install
-   git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 You can then start OctoPrint via ``octoprint`` after activating one of the two virtual environments.
 
@@ -163,7 +158,6 @@ Open the Git Bash you just installed and in that:
    pip install --upgrade pip
    pip install -e .[develop,plugins,docs]
    pre-commit install
-   git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 .. _sec-development-environment-mac:
 
@@ -214,7 +208,6 @@ You'll need a user account with administrator privileges.
        pip install --upgrade pip
        pip install -e .[develop,plugins]
        pre-commit install
-       git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 .. _sec-development-environment-ides:
 
@@ -292,18 +285,6 @@ PyCharm
 
     Note that this requires you to also have installed the additional ``docs`` dependencies into the Python 3 venv as
     described above via ``pip install -e .[develop,plugins,docs]``.
-
-  - Settings > Tools > File Watchers (you might have to enable this, it's a bundled plugin), add new:
-
-    * Name: pre-commit
-    * File type: Python
-    * Scope: Module 'OctoPrint'
-    * Program: ``<OctoPrint venv3 folder>/bin/pre-commit`` (Linux) or ``<OctoPrint venv3 folder>/Scripts/pre-commit`` (Windows)
-    * Arguments: ``run --hook-stage manual --files $FilePath$``
-    * Output paths to refresh: ``$FilePath$``
-    * Working directory: ``$ProjectFileDir$``
-    * disable "Auto-save edited files to trigger the watched"
-    * enable "Trigger the watched on external changes"
 
 To switch between Python 2 and 3, all you need to do now is change the Project Default Interpreter and restart
 OctoPrint. On current PyCharm versions you can do that right from a small selection field in the footer of the IDE.

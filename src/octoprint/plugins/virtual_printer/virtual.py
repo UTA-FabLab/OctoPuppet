@@ -1801,7 +1801,6 @@ class VirtualPrinter(object):
     def _error(self, error, *args, **kwargs):
         # type: (str, Any, Any) -> str
         return "Error: {}".format(self._errors.get(error).format(*args, **kwargs))
->>>>>>> 1f93b2355... 🎨 Switch to black formatting
 
 
 # noinspection PyUnresolvedReferences

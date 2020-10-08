@@ -1556,7 +1556,14 @@ class ResettableTimer(threading.Thread):
     """
 
     def __init__(
-        self, interval, function, args=None, kwargs=None, on_reset=None, on_cancelled=None, daemon=True
+        self,
+        interval,
+        function,
+        args=None,
+        kwargs=None,
+        on_reset=None,
+        on_cancelled=None,
+        daemon=True,
     ):
         threading.Thread.__init__(self)
         self._event = threading.Event()

@@ -2739,6 +2739,9 @@ input[type="number"].input-nospin {
     color: #030303;
     cursor: default
 }
+textarea.monospace {
+    font-family: monospace
+}
 .progress-text,
 .progress-text-centered {
   position: relative;

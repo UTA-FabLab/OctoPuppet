@@ -2431,12 +2431,6 @@ textarea.block {
   transition: all 0.3s ease-out;
   opacity: 1;
 }
-.icon-sd-black-14 {
-  background: url("../img/icon-sd-black-14.png") 0 3px no-repeat;
-  width: 11px;
-  height: 17px;
-  display: inline-block !important;
-}
 .center {
   float: none;
   margin-left: auto;

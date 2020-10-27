@@ -1,0 +1,1472 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>storage module &mdash; OctoPuppet  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to OctoPuppet’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> OctoPuppet
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                FabLab
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Code documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">storage.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#working">Working:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-model">Data Model:</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">OctoPuppet</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>storage module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/storage.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="storage-module">
+<h1>storage module<a class="headerlink" href="#storage-module" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="working">
+<h2>Working:<a class="headerlink" href="#working" title="Permalink to this headline">¶</a></h2>
+<p>The storage.py uses a couple of predefined abstract functions to access the Local File Storage.
+This holds all the files, folders and metadata related to OctoPuppet. Metadata is managed by <code class="docutils literal notranslate"><span class="pre">metadata.yaml</span></code> files in the respective
+folders, indexed by sanitized filenames stored within the folder.</p>
+</div>
+<div class="section" id="data-model">
+<h2>Data Model:<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h2>
+<p>The fields listed below are updated in the metadata storage for OctoPuppet.
+The data values listed below are fed to the metadata for every print command issued;
+values are extracted from the gcode.</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">estimatedPrintTime</span></code></p></td>
+<td><p>Estimated time the file takes to print, in minutes</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">filament</span></code></p></td>
+<td><p>Substructure describing estimated filament usage. Keys are <code class="docutils literal notranslate"><span class="pre">tool0</span></code> for the first extruder, <code class="docutils literal notranslate"><span class="pre">tool1</span></code> for the second and so on. For each tool extruded length and volume (based on diameter) are provided.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">filament.toolX.length</span></code></p></td>
+<td><p>The extruded length in mm</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">filament.toolX.volume</span></code></p></td>
+<td><p>The extruded volume in cm³</p></td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-storage"></span><dl class="py class">
+<dt id="storage.LocalFileStorage">
+<em class="property">class </em><code class="sig-prename descclassname">storage.</code><code class="sig-name descname">LocalFileStorage</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">basefolder</span></em>, <em class="sig-param"><span class="n">create</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#storage.StorageInterface" title="storage.StorageInterface"><code class="xref py py-class docutils literal notranslate"><span class="pre">storage.StorageInterface</span></code></a></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">LocalFileStorage</span></code> is a storage implementation which holds all files, folders and metadata on disk.</p>
+<p>Metadata is managed inside <code class="docutils literal notranslate"><span class="pre">.metadata.yaml</span></code> files in the respective folders, indexed by the sanitized filenames
+stored within the folder. Metadata access is managed through an LRU cache to minimize access overhead.</p>
+<p>This storage type implements <a class="reference internal" href="#storage.LocalFileStorage.path_on_disk" title="storage.LocalFileStorage.path_on_disk"><code class="xref py py-func docutils literal notranslate"><span class="pre">path_on_disk()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference internal" href="#storage.LocalFileStorage.analysis_backlog" title="storage.LocalFileStorage.analysis_backlog"><code class="xref py py-obj docutils literal notranslate"><span class="pre">analysis_backlog</span></code></a></dt><dd><p>Get an iterator over all items stored in the storage that need to be analysed by the <code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisQueue</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.add_file" title="storage.LocalFileStorage.add_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_file</span></code></a>(path, file_object[, …])</p></td>
+<td><p>Adds the file <code class="docutils literal notranslate"><span class="pre">file_object</span></code> as <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.add_folder" title="storage.LocalFileStorage.add_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_folder</span></code></a>(path[, ignore_existing])</p></td>
+<td><p>Adds a folder as <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.add_link" title="storage.LocalFileStorage.add_link"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_link</span></code></a>(path, rel, data)</p></td>
+<td><p>Adds a link of relation <code class="docutils literal notranslate"><span class="pre">rel</span></code> to file <code class="docutils literal notranslate"><span class="pre">path</span></code> with the given <code class="docutils literal notranslate"><span class="pre">data</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.copy_file" title="storage.LocalFileStorage.copy_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_file</span></code></a>(source, destination)</p></td>
+<td><p>Copys the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.copy_folder" title="storage.LocalFileStorage.copy_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_folder</span></code></a>(source, destination)</p></td>
+<td><p>Copys the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.file_exists" title="storage.LocalFileStorage.file_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">file_exists</span></code></a>(path)</p></td>
+<td><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.file_in_path" title="storage.LocalFileStorage.file_in_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">file_in_path</span></code></a>(path, filepath)</p></td>
+<td><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">file</span></code> is inside <code class="docutils literal notranslate"><span class="pre">path</span></code> or not.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.folder_exists" title="storage.LocalFileStorage.folder_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">folder_exists</span></code></a>(path)</p></td>
+<td><p>Returns whether the folder indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.get_metadata" title="storage.LocalFileStorage.get_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_metadata</span></code></a>(path)</p></td>
+<td><p>Retrieves the metadata for the file <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.has_analysis" title="storage.LocalFileStorage.has_analysis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_analysis</span></code></a>(path)</p></td>
+<td><p>Returns whether the file at path has been analysed yet</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.join_path" title="storage.LocalFileStorage.join_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">join_path</span></code></a>(*path)</p></td>
+<td><p>Join path elements together :param path: path elements to join :return: joined representation of the path to be usable as fully qualified path for further operations</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.last_modified" title="storage.LocalFileStorage.last_modified"><code class="xref py py-obj docutils literal notranslate"><span class="pre">last_modified</span></code></a>([path, recursive])</p></td>
+<td><p>Get the last modification date of the specified <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">path</span></code>’s subtree.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.list_files" title="storage.LocalFileStorage.list_files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_files</span></code></a>([path, filter, recursive])</p></td>
+<td><p>List all files in storage starting at <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.move_file" title="storage.LocalFileStorage.move_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">move_file</span></code></a>(source, destination[, allow_overwrite])</p></td>
+<td><p>Moves the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.move_folder" title="storage.LocalFileStorage.move_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">move_folder</span></code></a>(source, destination)</p></td>
+<td><p>Moves the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.path_in_storage" title="storage.LocalFileStorage.path_in_storage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_in_storage</span></code></a>(path)</p></td>
+<td><p>Retrieves the equivalent in the storage adapter for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.path_on_disk" title="storage.LocalFileStorage.path_on_disk"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_on_disk</span></code></a>(path)</p></td>
+<td><p>Retrieves the path on disk for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.remove_additional_metadata" title="storage.LocalFileStorage.remove_additional_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_additional_metadata</span></code></a>(path, key)</p></td>
+<td><p>Removes additional metadata under <code class="docutils literal notranslate"><span class="pre">key</span></code> for <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.remove_file" title="storage.LocalFileStorage.remove_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_file</span></code></a>(path)</p></td>
+<td><p>Removes the file at <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.remove_folder" title="storage.LocalFileStorage.remove_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_folder</span></code></a>(path[, recursive])</p></td>
+<td><p>Removes the folder at <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.remove_link" title="storage.LocalFileStorage.remove_link"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_link</span></code></a>(path, rel, data)</p></td>
+<td><p>Removes the link consisting of <code class="docutils literal notranslate"><span class="pre">rel</span></code> and <code class="docutils literal notranslate"><span class="pre">data</span></code> from file <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.sanitize" title="storage.LocalFileStorage.sanitize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sanitize</span></code></a>(path)</p></td>
+<td><p>Returns a <code class="docutils literal notranslate"><span class="pre">(path,</span> <span class="pre">name)</span></code> tuple derived from the provided <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.sanitize_name" title="storage.LocalFileStorage.sanitize_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sanitize_name</span></code></a>(name)</p></td>
+<td><p>Raises a <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> for a <code class="docutils literal notranslate"><span class="pre">name</span></code> containing <code class="docutils literal notranslate"><span class="pre">/</span></code> or <code class="docutils literal notranslate"><span class="pre">\</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.sanitize_path" title="storage.LocalFileStorage.sanitize_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sanitize_path</span></code></a>(path)</p></td>
+<td><p>Ensures that the on disk representation of <code class="docutils literal notranslate"><span class="pre">path</span></code> is located under the configured basefolder.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.LocalFileStorage.set_additional_metadata" title="storage.LocalFileStorage.set_additional_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_additional_metadata</span></code></a>(path, key, data[, …])</p></td>
+<td><p>Adds additional metadata to the metadata of <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.LocalFileStorage.split_path" title="storage.LocalFileStorage.split_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_path</span></code></a>(path)</p></td>
+<td><p>Split <code class="docutils literal notranslate"><span class="pre">path</span></code> into base directory and file name.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 74%" />
+<col style="width: 26%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>add_history</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>analysis_backlog_for_path</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>get_link</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>remove_history</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>update_history</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt id="storage.LocalFileStorage.add_file">
+<code class="sig-name descname">add_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">file_object</span></em>, <em class="sig-param"><span class="n">printer_profile</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">links</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">allow_overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.add_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds the file <code class="docutils literal notranslate"><span class="pre">file_object</span></code> as <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – the file’s new path, will be sanitized</p></li>
+<li><p><strong>file_object</strong> (<em>object</em>) – a file object that provides a <code class="docutils literal notranslate"><span class="pre">save</span></code> method which will be called with the destination path
+where the object should then store its contents</p></li>
+<li><p><strong>printer_profile</strong> (<em>object</em>) – the printer profile associated with this file (if any)</p></li>
+<li><p><strong>links</strong> (<em>list</em>) – any links to add with the file</p></li>
+<li><p><strong>allow_overwrite</strong> (<em>bool</em>) – if set to True no error will be raised if the file already exists and the existing file
+and its metadata will just be silently overwritten</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the sanitized name of the file to be used for future references to it</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.add_folder">
+<code class="sig-name descname">add_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">ignore_existing</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.add_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a folder as <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">path</span></code> will be sanitized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – the path of the new folder</p></li>
+<li><p><strong>ignore_existing</strong> (<em>bool</em>) – if set to True, no error will be raised if the folder to be added already exists</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the sanitized name of the new folder to be used for future references to the folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.add_history">
+<code class="sig-name descname">add_history</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.add_history" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.add_link">
+<code class="sig-name descname">add_link</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">rel</span></em>, <em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.add_link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a link of relation <code class="docutils literal notranslate"><span class="pre">rel</span></code> to file <code class="docutils literal notranslate"><span class="pre">path</span></code> with the given <code class="docutils literal notranslate"><span class="pre">data</span></code>.</p>
+<p>The following relation types are currently supported:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: adds a link to a model from which the file was created/sliced, expected additional data is the <code class="docutils literal notranslate"><span class="pre">name</span></code>
+and optionally the <code class="docutils literal notranslate"><span class="pre">hash</span></code> of the file to link to. If the link can be resolved against another file on the
+current <code class="docutils literal notranslate"><span class="pre">path</span></code>, not only will it be added to the links of <code class="docutils literal notranslate"><span class="pre">name</span></code> but a reverse link of type <code class="docutils literal notranslate"><span class="pre">machinecode</span></code>
+referring to <code class="docutils literal notranslate"><span class="pre">name</span></code> and its hash will also be added to the linked <code class="docutils literal notranslate"><span class="pre">model</span></code> file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">machinecode</span></code>: adds a link to a file containing machine code created from the current file (model), expected
+additional data is the <code class="docutils literal notranslate"><span class="pre">name</span></code> and optionally the <code class="docutils literal notranslate"><span class="pre">hash</span></code> of the file to link to. If the link can be resolved
+against another file on the current <code class="docutils literal notranslate"><span class="pre">path</span></code>, not only will it be added to the links of <code class="docutils literal notranslate"><span class="pre">name</span></code> but a reverse
+link of type <code class="docutils literal notranslate"><span class="pre">model</span></code> referring to <code class="docutils literal notranslate"><span class="pre">name</span></code> and its hash will also be added to the linked <code class="docutils literal notranslate"><span class="pre">model</span></code> file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">web</span></code>: adds a location on the web associated with this file (e.g. a website where to download a model),
+expected additional data is a <code class="docutils literal notranslate"><span class="pre">href</span></code> attribute holding the website’s URL and optionally a <code class="docutils literal notranslate"><span class="pre">retrieved</span></code>
+attribute describing when the content was retrieved</p></li>
+</ul>
+</div></blockquote>
+<p>Note that adding <code class="docutils literal notranslate"><span class="pre">model</span></code> links to files identifying as models or <code class="docutils literal notranslate"><span class="pre">machinecode</span></code> links to files identifying
+as machine code will be refused.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – path of the file for which to add a link</p></li>
+<li><p><strong>rel</strong> – type of relation of the link to add (currently <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">machinecode</span></code> and <code class="docutils literal notranslate"><span class="pre">web</span></code> are supported)</p></li>
+<li><p><strong>data</strong> – additional data of the link to add</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.analysis_backlog">
+<em class="property">property </em><code class="sig-name descname">analysis_backlog</code><a class="headerlink" href="#storage.LocalFileStorage.analysis_backlog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an iterator over all items stored in the storage that need to be analysed by the <code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisQueue</span></code>.</p>
+<p>The yielded elements are expected as storage specific absolute paths to the respective files. Don’t forget
+to recurse into folders if your storage adapter supports those.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>an iterator yielding all un-analysed files in the storage</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.analysis_backlog_for_path">
+<code class="sig-name descname">analysis_backlog_for_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.analysis_backlog_for_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.copy_file">
+<code class="sig-name descname">copy_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.copy_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copys the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source file</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path in the storage to the copy of the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.copy_folder">
+<code class="sig-name descname">copy_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.copy_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copys the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source folder</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path in the storage to the copy of the folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.file_exists">
+<code class="sig-name descname">file_exists</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.file_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.
+:param string path: the path to check for existence
+:return: <code class="docutils literal notranslate"><span class="pre">True</span></code> if the file exists, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.file_in_path">
+<code class="sig-name descname">file_in_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.file_in_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">file</span></code> is inside <code class="docutils literal notranslate"><span class="pre">path</span></code> or not.
+:param string path: the path to check
+:param string filepath: path to the file
+:return: <code class="docutils literal notranslate"><span class="pre">True</span></code> if the file is inside the path, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.folder_exists">
+<code class="sig-name descname">folder_exists</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.folder_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the folder indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.
+:param string path: the path to check for existence
+:return: <code class="docutils literal notranslate"><span class="pre">True</span></code> if the folder exists, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.get_link">
+<code class="sig-name descname">get_link</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">rel</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.get_link" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.get_metadata">
+<code class="sig-name descname">get_metadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.get_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the metadata for the file <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> – virtual path to the file for which to retrieve the metadata</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the metadata associated with the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.has_analysis">
+<code class="sig-name descname">has_analysis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.has_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the file at path has been analysed yet</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> – virtual path to the file for which to retrieve the metadata</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.join_path">
+<code class="sig-name descname">join_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.join_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Join path elements together
+:param path: path elements to join
+:return: joined representation of the path to be usable as fully qualified path for further operations</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.last_modified">
+<code class="sig-name descname">last_modified</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">recursive</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.last_modified" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the last modification date of the specified <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">path</span></code>’s subtree.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>path (str or None): Path for which to determine the subtree’s last modification date. If left out or</dt><dd><p>set to None, defatuls to storage root.</p>
+</dd>
+<dt>recursive (bool): Whether to determine only the date of the specified <code class="docutils literal notranslate"><span class="pre">path</span></code> (False, default) or</dt><dd><p>the whole <code class="docutils literal notranslate"><span class="pre">path</span></code>’s subtree (True).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Returns: (float) The last modification date of the indicated subtree</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.list_files">
+<code class="sig-name descname">list_files</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">filter</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">recursive</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.list_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>List all files in storage starting at <code class="docutils literal notranslate"><span class="pre">path</span></code>. If <code class="docutils literal notranslate"><span class="pre">recursive</span></code> is set to True (the default), also dives into
+subfolders.</p>
+<p>An optional filter function can be supplied which will be called with a file name and file data and which has
+to return True if the file is to be included in the result or False if not.</p>
+<p>The data structure of the returned result will be a dictionary mapping from file names to entry data. File nodes
+will contain their metadata here, folder nodes will contain their contained files and folders. Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;some_folder&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;folder&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;some_sub_folder&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;some_sub_folder&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder/some_sub_folder&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;folder&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;folder&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+      <span class="p">},</span>
+      <span class="s2">&quot;some_file.gcode&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;some_file.gcode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder/some_file.gcode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;machinecode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;machinecode&quot;</span><span class="p">,</span> <span class="s2">&quot;gcode&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;sha1 hash&gt;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">...</span> <span class="p">],</span>
+        <span class="o">...</span>
+      <span class="p">},</span>
+      <span class="o">...</span>
+    <span class="p">}</span>
+  <span class="s2">&quot;test.gcode&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;test.gcode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;test.gcode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;machinecode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;machinecode&quot;</span><span class="p">,</span> <span class="s2">&quot;gcode&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;sha1 hash&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="o">...</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;test.stl&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;test.stl&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;test.stl&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;stl&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;sha1 hash&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="o">...</span>
+  <span class="p">},</span>
+  <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – base path from which to recursively list all files, optional, if not supplied listing will start
+from root of base folder</p></li>
+<li><p><strong>filter</strong> (<em>function</em>) – a filter that matches the files that are to be returned, may be left out in which case no
+filtering will take place</p></li>
+<li><p><strong>recursive</strong> (<em>bool</em>) – will also step into sub folders for building the complete list if set to True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a dictionary mapping entry names to entry data that represents the whole file list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.move_file">
+<code class="sig-name descname">move_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em>, <em class="sig-param"><span class="n">allow_overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.move_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Moves the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source file</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the new path in the storage to the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.move_folder">
+<code class="sig-name descname">move_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.move_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Moves the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source folder</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the new path in the storage to the folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.path_in_storage">
+<code class="sig-name descname">path_in_storage</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.path_in_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the equivalent in the storage adapter for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<p>Opposite of <a class="reference internal" href="#storage.LocalFileStorage.path_on_disk" title="storage.LocalFileStorage.path_on_disk"><code class="xref py py-func docutils literal notranslate"><span class="pre">path_on_disk()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – the path for which to retrieve the storage path</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path in storage to <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.path_on_disk">
+<code class="sig-name descname">path_on_disk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.path_on_disk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the path on disk for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<p>Note: if the storage is not on disk and there exists no path on disk to refer to it, this method should
+raise an <code class="xref py py-class docutils literal notranslate"><span class="pre">io.UnsupportedOperation</span></code></p>
+<p>Opposite of <a class="reference internal" href="#storage.LocalFileStorage.path_in_storage" title="storage.LocalFileStorage.path_in_storage"><code class="xref py py-func docutils literal notranslate"><span class="pre">path_in_storage()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – the virtual path for which to retrieve the path on disk</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path on disk to <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.remove_additional_metadata">
+<code class="sig-name descname">remove_additional_metadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.remove_additional_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes additional metadata under <code class="docutils literal notranslate"><span class="pre">key</span></code> for <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the virtual path to the file for which to remove the metadata under <code class="docutils literal notranslate"><span class="pre">key</span></code></p></li>
+<li><p><strong>key</strong> – the key to remove</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.remove_file">
+<code class="sig-name descname">remove_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.remove_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the file at <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<p>Will also take care of deleting the corresponding entries
+in the metadata and deleting all links pointing to the file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – path of the file to remove</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.remove_folder">
+<code class="sig-name descname">remove_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">recursive</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.remove_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the folder at <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – the path of the folder to remove</p></li>
+<li><p><strong>recursive</strong> (<em>bool</em>) – if set to True, contained folders and files will also be removed, otherwise and error will
+be raised if the folder is not empty (apart from <code class="docutils literal notranslate"><span class="pre">.metadata.yaml</span></code>) when it’s to be removed</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.remove_history">
+<code class="sig-name descname">remove_history</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">index</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.remove_history" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.remove_link">
+<code class="sig-name descname">remove_link</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">rel</span></em>, <em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.remove_link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the link consisting of <code class="docutils literal notranslate"><span class="pre">rel</span></code> and <code class="docutils literal notranslate"><span class="pre">data</span></code> from file <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – path of the file from which to remove the link</p></li>
+<li><p><strong>rel</strong> – type of relation of the link to remove (currently <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">machinecode</span></code> and <code class="docutils literal notranslate"><span class="pre">web</span></code> are supported)</p></li>
+<li><p><strong>data</strong> – additional data of the link to remove, must match existing link</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.sanitize">
+<code class="sig-name descname">sanitize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.sanitize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a <code class="docutils literal notranslate"><span class="pre">(path,</span> <span class="pre">name)</span></code> tuple derived from the provided <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">path</span></code> may be:</dt><dd><ul class="simple">
+<li><p>a storage path</p></li>
+<li><p>an absolute file system path</p></li>
+<li><p>a tuple or list containing all individual path elements</p></li>
+<li><p>a string representation of the path</p></li>
+<li><p>with or without a file name</p></li>
+</ul>
+</dd>
+</dl>
+<p>Note that for a <code class="docutils literal notranslate"><span class="pre">path</span></code> without a trailing slash the last part will be considered a file name and
+hence be returned at second position. If you only need to convert a folder path, be sure to
+include a trailing slash for a string <code class="docutils literal notranslate"><span class="pre">path</span></code> or an empty last element for a list <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.sanitize_name">
+<code class="sig-name descname">sanitize_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.sanitize_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raises a <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> for a <code class="docutils literal notranslate"><span class="pre">name</span></code> containing <code class="docutils literal notranslate"><span class="pre">/</span></code> or <code class="docutils literal notranslate"><span class="pre">\</span></code>. Otherwise
+slugifies the given <code class="docutils literal notranslate"><span class="pre">name</span></code> by converting it to ASCII, leaving <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">_</span></code>, <code class="docutils literal notranslate"><span class="pre">.</span></code>,
+<code class="docutils literal notranslate"><span class="pre">(</span></code>, and <code class="docutils literal notranslate"><span class="pre">)</span></code> as is.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.sanitize_path">
+<code class="sig-name descname">sanitize_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.sanitize_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ensures that the on disk representation of <code class="docutils literal notranslate"><span class="pre">path</span></code> is located under the configured basefolder. Resolves all
+relative path elements (e.g. <code class="docutils literal notranslate"><span class="pre">..</span></code>) and sanitizes folder names using <a class="reference internal" href="#storage.LocalFileStorage.sanitize_name" title="storage.LocalFileStorage.sanitize_name"><code class="xref py py-func docutils literal notranslate"><span class="pre">sanitize_name()</span></code></a>. Final path is the
+absolute path including leading <code class="docutils literal notranslate"><span class="pre">basefolder</span></code> path.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.set_additional_metadata">
+<code class="sig-name descname">set_additional_metadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">key</span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">merge</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.set_additional_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds additional metadata to the metadata of <code class="docutils literal notranslate"><span class="pre">path</span></code>. Metadata in <code class="docutils literal notranslate"><span class="pre">data</span></code> will be saved under <code class="docutils literal notranslate"><span class="pre">key</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">overwrite</span></code> is set and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists in <code class="docutils literal notranslate"><span class="pre">name</span></code>’s metadata, the current value will be overwritten.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">merge</span></code> is set and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists and both <code class="docutils literal notranslate"><span class="pre">data</span></code> and the existing data under <code class="docutils literal notranslate"><span class="pre">key</span></code> are dictionaries,
+the two dictionaries will be merged recursively.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the virtual path to the file for which to add additional metadata</p></li>
+<li><p><strong>key</strong> – key of metadata to add</p></li>
+<li><p><strong>data</strong> – metadata to add</p></li>
+<li><p><strong>overwrite</strong> – if True and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists, it will be overwritten</p></li>
+<li><p><strong>merge</strong> – if True and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists and both <code class="docutils literal notranslate"><span class="pre">data</span></code> and the existing data are dictionaries, they
+will be merged</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.split_path">
+<code class="sig-name descname">split_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.split_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split <code class="docutils literal notranslate"><span class="pre">path</span></code> into base directory and file name.
+:param path: the path to split
+:return: a tuple (base directory, file name)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.LocalFileStorage.update_history">
+<code class="sig-name descname">update_history</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">index</span></em>, <em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.LocalFileStorage.update_history" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt id="storage.StorageError">
+<em class="property">exception </em><code class="sig-prename descclassname">storage.</code><code class="sig-name descname">StorageError</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span></em>, <em class="sig-param"><span class="n">code</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cause</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<dl class="py attribute">
+<dt id="storage.StorageError.ALREADY_EXISTS">
+<code class="sig-name descname">ALREADY_EXISTS</code><em class="property"> = 'already_exists'</em><a class="headerlink" href="#storage.StorageError.ALREADY_EXISTS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.DOES_NOT_EXIST">
+<code class="sig-name descname">DOES_NOT_EXIST</code><em class="property"> = 'does_not_exist'</em><a class="headerlink" href="#storage.StorageError.DOES_NOT_EXIST" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.INVALID_DESTINATION">
+<code class="sig-name descname">INVALID_DESTINATION</code><em class="property"> = 'invalid_destination'</em><a class="headerlink" href="#storage.StorageError.INVALID_DESTINATION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.INVALID_DIRECTORY">
+<code class="sig-name descname">INVALID_DIRECTORY</code><em class="property"> = 'invalid_directory'</em><a class="headerlink" href="#storage.StorageError.INVALID_DIRECTORY" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.INVALID_FILE">
+<code class="sig-name descname">INVALID_FILE</code><em class="property"> = 'invalid_file'</em><a class="headerlink" href="#storage.StorageError.INVALID_FILE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.INVALID_SOURCE">
+<code class="sig-name descname">INVALID_SOURCE</code><em class="property"> = 'invalid_source'</em><a class="headerlink" href="#storage.StorageError.INVALID_SOURCE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.NOT_EMPTY">
+<code class="sig-name descname">NOT_EMPTY</code><em class="property"> = 'not_empty'</em><a class="headerlink" href="#storage.StorageError.NOT_EMPTY" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="storage.StorageError.UNKNOWN">
+<code class="sig-name descname">UNKNOWN</code><em class="property"> = 'unknown'</em><a class="headerlink" href="#storage.StorageError.UNKNOWN" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="storage.StorageInterface">
+<em class="property">class </em><code class="sig-prename descclassname">storage.</code><code class="sig-name descname">StorageInterface</code><a class="headerlink" href="#storage.StorageInterface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Interface of storage adapters for OctoPrint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference internal" href="#storage.StorageInterface.analysis_backlog" title="storage.StorageInterface.analysis_backlog"><code class="xref py py-obj docutils literal notranslate"><span class="pre">analysis_backlog</span></code></a></dt><dd><p>Get an iterator over all items stored in the storage that need to be analysed by the <code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisQueue</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.add_file" title="storage.StorageInterface.add_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_file</span></code></a>(path, file_object[, …])</p></td>
+<td><p>Adds the file <code class="docutils literal notranslate"><span class="pre">file_object</span></code> as <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.add_folder" title="storage.StorageInterface.add_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_folder</span></code></a>(path[, ignore_existing])</p></td>
+<td><p>Adds a folder as <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.add_link" title="storage.StorageInterface.add_link"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_link</span></code></a>(path, rel, data)</p></td>
+<td><p>Adds a link of relation <code class="docutils literal notranslate"><span class="pre">rel</span></code> to file <code class="docutils literal notranslate"><span class="pre">path</span></code> with the given <code class="docutils literal notranslate"><span class="pre">data</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.copy_file" title="storage.StorageInterface.copy_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_file</span></code></a>(source, destination)</p></td>
+<td><p>Copys the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.copy_folder" title="storage.StorageInterface.copy_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_folder</span></code></a>(source, destination)</p></td>
+<td><p>Copys the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.file_exists" title="storage.StorageInterface.file_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">file_exists</span></code></a>(path)</p></td>
+<td><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.file_in_path" title="storage.StorageInterface.file_in_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">file_in_path</span></code></a>(path, filepath)</p></td>
+<td><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">file</span></code> is inside <code class="docutils literal notranslate"><span class="pre">path</span></code> or not.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.folder_exists" title="storage.StorageInterface.folder_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">folder_exists</span></code></a>(path)</p></td>
+<td><p>Returns whether the folder indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.get_metadata" title="storage.StorageInterface.get_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_metadata</span></code></a>(path)</p></td>
+<td><p>Retrieves the metadata for the file <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.has_analysis" title="storage.StorageInterface.has_analysis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_analysis</span></code></a>(path)</p></td>
+<td><p>Returns whether the file at path has been analysed yet</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.join_path" title="storage.StorageInterface.join_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">join_path</span></code></a>(*path)</p></td>
+<td><p>Join path elements together :param path: path elements to join :return: joined representation of the path to be usable as fully qualified path for further operations</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.last_modified" title="storage.StorageInterface.last_modified"><code class="xref py py-obj docutils literal notranslate"><span class="pre">last_modified</span></code></a>([path, recursive])</p></td>
+<td><p>Get the last modification date of the specified <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">path</span></code>’s subtree.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.list_files" title="storage.StorageInterface.list_files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_files</span></code></a>([path, filter, recursive])</p></td>
+<td><p>List all files in storage starting at <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.move_file" title="storage.StorageInterface.move_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">move_file</span></code></a>(source, destination)</p></td>
+<td><p>Moves the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.move_folder" title="storage.StorageInterface.move_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">move_folder</span></code></a>(source, destination)</p></td>
+<td><p>Moves the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.path_in_storage" title="storage.StorageInterface.path_in_storage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_in_storage</span></code></a>(path)</p></td>
+<td><p>Retrieves the equivalent in the storage adapter for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.path_on_disk" title="storage.StorageInterface.path_on_disk"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_on_disk</span></code></a>(path)</p></td>
+<td><p>Retrieves the path on disk for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.remove_additional_metadata" title="storage.StorageInterface.remove_additional_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_additional_metadata</span></code></a>(path, key)</p></td>
+<td><p>Removes additional metadata under <code class="docutils literal notranslate"><span class="pre">key</span></code> for <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.remove_file" title="storage.StorageInterface.remove_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_file</span></code></a>(path)</p></td>
+<td><p>Removes the file at <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.remove_folder" title="storage.StorageInterface.remove_folder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_folder</span></code></a>(path[, recursive])</p></td>
+<td><p>Removes the folder at <code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.remove_link" title="storage.StorageInterface.remove_link"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_link</span></code></a>(path, rel, data)</p></td>
+<td><p>Removes the link consisting of <code class="docutils literal notranslate"><span class="pre">rel</span></code> and <code class="docutils literal notranslate"><span class="pre">data</span></code> from file <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.sanitize" title="storage.StorageInterface.sanitize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sanitize</span></code></a>(path)</p></td>
+<td><p>Sanitizes the given <code class="docutils literal notranslate"><span class="pre">path</span></code>, stripping it of all invalid characters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.sanitize_name" title="storage.StorageInterface.sanitize_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sanitize_name</span></code></a>(name)</p></td>
+<td><p>Sanitizes the given file <code class="docutils literal notranslate"><span class="pre">name</span></code>, stripping it of all invalid characters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.sanitize_path" title="storage.StorageInterface.sanitize_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sanitize_path</span></code></a>(path)</p></td>
+<td><p>Sanitizes the given folder-only <code class="docutils literal notranslate"><span class="pre">path</span></code>, stripping it of all invalid characters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#storage.StorageInterface.set_additional_metadata" title="storage.StorageInterface.set_additional_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_additional_metadata</span></code></a>(path, key, data[, …])</p></td>
+<td><p>Adds additional metadata to the metadata of <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#storage.StorageInterface.split_path" title="storage.StorageInterface.split_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_path</span></code></a>(path)</p></td>
+<td><p>Split <code class="docutils literal notranslate"><span class="pre">path</span></code> into base directory and file name.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 74%" />
+<col style="width: 26%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>analysis_backlog_for_path</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt id="storage.StorageInterface.add_file">
+<code class="sig-name descname">add_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">file_object</span></em>, <em class="sig-param"><span class="n">printer_profile</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">links</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">allow_overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.add_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds the file <code class="docutils literal notranslate"><span class="pre">file_object</span></code> as <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – the file’s new path, will be sanitized</p></li>
+<li><p><strong>file_object</strong> (<em>object</em>) – a file object that provides a <code class="docutils literal notranslate"><span class="pre">save</span></code> method which will be called with the destination path
+where the object should then store its contents</p></li>
+<li><p><strong>printer_profile</strong> (<em>object</em>) – the printer profile associated with this file (if any)</p></li>
+<li><p><strong>links</strong> (<em>list</em>) – any links to add with the file</p></li>
+<li><p><strong>allow_overwrite</strong> (<em>bool</em>) – if set to True no error will be raised if the file already exists and the existing file
+and its metadata will just be silently overwritten</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the sanitized name of the file to be used for future references to it</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.add_folder">
+<code class="sig-name descname">add_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">ignore_existing</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.add_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a folder as <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">path</span></code> will be sanitized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – the path of the new folder</p></li>
+<li><p><strong>ignore_existing</strong> (<em>bool</em>) – if set to True, no error will be raised if the folder to be added already exists</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the sanitized name of the new folder to be used for future references to the folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.add_link">
+<code class="sig-name descname">add_link</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">rel</span></em>, <em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.add_link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a link of relation <code class="docutils literal notranslate"><span class="pre">rel</span></code> to file <code class="docutils literal notranslate"><span class="pre">path</span></code> with the given <code class="docutils literal notranslate"><span class="pre">data</span></code>.</p>
+<p>The following relation types are currently supported:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: adds a link to a model from which the file was created/sliced, expected additional data is the <code class="docutils literal notranslate"><span class="pre">name</span></code>
+and optionally the <code class="docutils literal notranslate"><span class="pre">hash</span></code> of the file to link to. If the link can be resolved against another file on the
+current <code class="docutils literal notranslate"><span class="pre">path</span></code>, not only will it be added to the links of <code class="docutils literal notranslate"><span class="pre">name</span></code> but a reverse link of type <code class="docutils literal notranslate"><span class="pre">machinecode</span></code>
+referring to <code class="docutils literal notranslate"><span class="pre">name</span></code> and its hash will also be added to the linked <code class="docutils literal notranslate"><span class="pre">model</span></code> file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">machinecode</span></code>: adds a link to a file containing machine code created from the current file (model), expected
+additional data is the <code class="docutils literal notranslate"><span class="pre">name</span></code> and optionally the <code class="docutils literal notranslate"><span class="pre">hash</span></code> of the file to link to. If the link can be resolved
+against another file on the current <code class="docutils literal notranslate"><span class="pre">path</span></code>, not only will it be added to the links of <code class="docutils literal notranslate"><span class="pre">name</span></code> but a reverse
+link of type <code class="docutils literal notranslate"><span class="pre">model</span></code> referring to <code class="docutils literal notranslate"><span class="pre">name</span></code> and its hash will also be added to the linked <code class="docutils literal notranslate"><span class="pre">model</span></code> file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">web</span></code>: adds a location on the web associated with this file (e.g. a website where to download a model),
+expected additional data is a <code class="docutils literal notranslate"><span class="pre">href</span></code> attribute holding the website’s URL and optionally a <code class="docutils literal notranslate"><span class="pre">retrieved</span></code>
+attribute describing when the content was retrieved</p></li>
+</ul>
+</div></blockquote>
+<p>Note that adding <code class="docutils literal notranslate"><span class="pre">model</span></code> links to files identifying as models or <code class="docutils literal notranslate"><span class="pre">machinecode</span></code> links to files identifying
+as machine code will be refused.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – path of the file for which to add a link</p></li>
+<li><p><strong>rel</strong> – type of relation of the link to add (currently <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">machinecode</span></code> and <code class="docutils literal notranslate"><span class="pre">web</span></code> are supported)</p></li>
+<li><p><strong>data</strong> – additional data of the link to add</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.analysis_backlog">
+<em class="property">property </em><code class="sig-name descname">analysis_backlog</code><a class="headerlink" href="#storage.StorageInterface.analysis_backlog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an iterator over all items stored in the storage that need to be analysed by the <code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisQueue</span></code>.</p>
+<p>The yielded elements are expected as storage specific absolute paths to the respective files. Don’t forget
+to recurse into folders if your storage adapter supports those.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>an iterator yielding all un-analysed files in the storage</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.analysis_backlog_for_path">
+<code class="sig-name descname">analysis_backlog_for_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.analysis_backlog_for_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.copy_file">
+<code class="sig-name descname">copy_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.copy_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copys the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source file</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path in the storage to the copy of the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.copy_folder">
+<code class="sig-name descname">copy_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.copy_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copys the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source folder</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path in the storage to the copy of the folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.file_exists">
+<code class="sig-name descname">file_exists</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.file_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.
+:param string path: the path to check for existence
+:return: <code class="docutils literal notranslate"><span class="pre">True</span></code> if the file exists, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.file_in_path">
+<code class="sig-name descname">file_in_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.file_in_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the file indicated by <code class="docutils literal notranslate"><span class="pre">file</span></code> is inside <code class="docutils literal notranslate"><span class="pre">path</span></code> or not.
+:param string path: the path to check
+:param string filepath: path to the file
+:return: <code class="docutils literal notranslate"><span class="pre">True</span></code> if the file is inside the path, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.folder_exists">
+<code class="sig-name descname">folder_exists</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.folder_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the folder indicated by <code class="docutils literal notranslate"><span class="pre">path</span></code> exists or not.
+:param string path: the path to check for existence
+:return: <code class="docutils literal notranslate"><span class="pre">True</span></code> if the folder exists, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.get_metadata">
+<code class="sig-name descname">get_metadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.get_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the metadata for the file <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> – virtual path to the file for which to retrieve the metadata</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the metadata associated with the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.has_analysis">
+<code class="sig-name descname">has_analysis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.has_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the file at path has been analysed yet</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> – virtual path to the file for which to retrieve the metadata</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.join_path">
+<code class="sig-name descname">join_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.join_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Join path elements together
+:param path: path elements to join
+:return: joined representation of the path to be usable as fully qualified path for further operations</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.last_modified">
+<code class="sig-name descname">last_modified</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">recursive</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.last_modified" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the last modification date of the specified <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">path</span></code>’s subtree.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>path (str or None): Path for which to determine the subtree’s last modification date. If left out or</dt><dd><p>set to None, defatuls to storage root.</p>
+</dd>
+<dt>recursive (bool): Whether to determine only the date of the specified <code class="docutils literal notranslate"><span class="pre">path</span></code> (False, default) or</dt><dd><p>the whole <code class="docutils literal notranslate"><span class="pre">path</span></code>’s subtree (True).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Returns: (float) The last modification date of the indicated subtree</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.list_files">
+<code class="sig-name descname">list_files</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">filter</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">recursive</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.list_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>List all files in storage starting at <code class="docutils literal notranslate"><span class="pre">path</span></code>. If <code class="docutils literal notranslate"><span class="pre">recursive</span></code> is set to True (the default), also dives into
+subfolders.</p>
+<p>An optional filter function can be supplied which will be called with a file name and file data and which has
+to return True if the file is to be included in the result or False if not.</p>
+<p>The data structure of the returned result will be a dictionary mapping from file names to entry data. File nodes
+will contain their metadata here, folder nodes will contain their contained files and folders. Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;some_folder&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;folder&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;some_sub_folder&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;some_sub_folder&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder/some_sub_folder&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;folder&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;folder&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+      <span class="p">},</span>
+      <span class="s2">&quot;some_file.gcode&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;some_file.gcode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;some_folder/some_file.gcode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;machinecode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;machinecode&quot;</span><span class="p">,</span> <span class="s2">&quot;gcode&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;sha1 hash&gt;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">...</span> <span class="p">],</span>
+        <span class="o">...</span>
+      <span class="p">},</span>
+      <span class="o">...</span>
+    <span class="p">}</span>
+  <span class="s2">&quot;test.gcode&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;test.gcode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;test.gcode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;machinecode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;machinecode&quot;</span><span class="p">,</span> <span class="s2">&quot;gcode&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;sha1 hash&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="o">...</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;test.stl&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;test.stl&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;test.stl&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;typePath&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;stl&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;sha1 hash&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="o">...</span>
+  <span class="p">},</span>
+  <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – base path from which to recursively list all files, optional, if not supplied listing will start
+from root of base folder</p></li>
+<li><p><strong>filter</strong> (<em>function</em>) – a filter that matches the files that are to be returned, may be left out in which case no
+filtering will take place</p></li>
+<li><p><strong>recursive</strong> (<em>bool</em>) – will also step into sub folders for building the complete list if set to True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a dictionary mapping entry names to entry data that represents the whole file list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.move_file">
+<code class="sig-name descname">move_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.move_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Moves the file <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source file</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the new path in the storage to the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.move_folder">
+<code class="sig-name descname">move_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">destination</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.move_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Moves the folder <code class="docutils literal notranslate"><span class="pre">source</span></code> to <code class="docutils literal notranslate"><span class="pre">destination</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<em>string</em>) – path to the source folder</p></li>
+<li><p><strong>destination</strong> (<em>string</em>) – path to destination</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the new path in the storage to the folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.path_in_storage">
+<code class="sig-name descname">path_in_storage</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.path_in_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the equivalent in the storage adapter for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<p>Opposite of <a class="reference internal" href="#storage.StorageInterface.path_on_disk" title="storage.StorageInterface.path_on_disk"><code class="xref py py-func docutils literal notranslate"><span class="pre">path_on_disk()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – the path for which to retrieve the storage path</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path in storage to <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.path_on_disk">
+<code class="sig-name descname">path_on_disk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.path_on_disk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the path on disk for <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<p>Note: if the storage is not on disk and there exists no path on disk to refer to it, this method should
+raise an <code class="xref py py-class docutils literal notranslate"><span class="pre">io.UnsupportedOperation</span></code></p>
+<p>Opposite of <a class="reference internal" href="#storage.StorageInterface.path_in_storage" title="storage.StorageInterface.path_in_storage"><code class="xref py py-func docutils literal notranslate"><span class="pre">path_in_storage()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – the virtual path for which to retrieve the path on disk</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path on disk to <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.remove_additional_metadata">
+<code class="sig-name descname">remove_additional_metadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.remove_additional_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes additional metadata under <code class="docutils literal notranslate"><span class="pre">key</span></code> for <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the virtual path to the file for which to remove the metadata under <code class="docutils literal notranslate"><span class="pre">key</span></code></p></li>
+<li><p><strong>key</strong> – the key to remove</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.remove_file">
+<code class="sig-name descname">remove_file</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.remove_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the file at <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<p>Will also take care of deleting the corresponding entries
+in the metadata and deleting all links pointing to the file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – path of the file to remove</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.remove_folder">
+<code class="sig-name descname">remove_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">recursive</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.remove_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the folder at <code class="docutils literal notranslate"><span class="pre">path</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – the path of the folder to remove</p></li>
+<li><p><strong>recursive</strong> (<em>bool</em>) – if set to True, contained folders and files will also be removed, otherwise and error will
+be raised if the folder is not empty (apart from <code class="docutils literal notranslate"><span class="pre">.metadata.yaml</span></code>) when it’s to be removed</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.remove_link">
+<code class="sig-name descname">remove_link</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">rel</span></em>, <em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.remove_link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the link consisting of <code class="docutils literal notranslate"><span class="pre">rel</span></code> and <code class="docutils literal notranslate"><span class="pre">data</span></code> from file <code class="docutils literal notranslate"><span class="pre">name</span></code> on <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – path of the file from which to remove the link</p></li>
+<li><p><strong>rel</strong> – type of relation of the link to remove (currently <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">machinecode</span></code> and <code class="docutils literal notranslate"><span class="pre">web</span></code> are supported)</p></li>
+<li><p><strong>data</strong> – additional data of the link to remove, must match existing link</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.sanitize">
+<code class="sig-name descname">sanitize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.sanitize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sanitizes the given <code class="docutils literal notranslate"><span class="pre">path</span></code>, stripping it of all invalid characters. The <code class="docutils literal notranslate"><span class="pre">path</span></code> may consist of both
+folder and file name, the underlying implementation must separate those if necessary and sanitize individually.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – the path to sanitize</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a 2-tuple containing the sanitized path and file name</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.sanitize_name">
+<code class="sig-name descname">sanitize_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.sanitize_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sanitizes the given file <code class="docutils literal notranslate"><span class="pre">name</span></code>, stripping it of all invalid characters.
+:param string name: the file name to sanitize
+:return: the sanitized name</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.sanitize_path">
+<code class="sig-name descname">sanitize_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.sanitize_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sanitizes the given folder-only <code class="docutils literal notranslate"><span class="pre">path</span></code>, stripping it of all invalid characters.
+:param string path: the path to sanitize
+:return: the sanitized path</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.set_additional_metadata">
+<code class="sig-name descname">set_additional_metadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">key</span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">merge</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.set_additional_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds additional metadata to the metadata of <code class="docutils literal notranslate"><span class="pre">path</span></code>. Metadata in <code class="docutils literal notranslate"><span class="pre">data</span></code> will be saved under <code class="docutils literal notranslate"><span class="pre">key</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">overwrite</span></code> is set and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists in <code class="docutils literal notranslate"><span class="pre">name</span></code>’s metadata, the current value will be overwritten.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">merge</span></code> is set and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists and both <code class="docutils literal notranslate"><span class="pre">data</span></code> and the existing data under <code class="docutils literal notranslate"><span class="pre">key</span></code> are dictionaries,
+the two dictionaries will be merged recursively.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – the virtual path to the file for which to add additional metadata</p></li>
+<li><p><strong>key</strong> – key of metadata to add</p></li>
+<li><p><strong>data</strong> – metadata to add</p></li>
+<li><p><strong>overwrite</strong> – if True and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists, it will be overwritten</p></li>
+<li><p><strong>merge</strong> – if True and <code class="docutils literal notranslate"><span class="pre">key</span></code> already exists and both <code class="docutils literal notranslate"><span class="pre">data</span></code> and the existing data are dictionaries, they
+will be merged</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="storage.StorageInterface.split_path">
+<code class="sig-name descname">split_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#storage.StorageInterface.split_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split <code class="docutils literal notranslate"><span class="pre">path</span></code> into base directory and file name.
+:param path: the path to split
+:return: a tuple (base directory, file name)</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to OctoPuppet’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Surbhi Zambad
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

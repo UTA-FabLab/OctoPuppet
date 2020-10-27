@@ -119,11 +119,11 @@ def sendOfflineData():
 			if currentData["state"]["text"] == "Printing":
 				currentTrans = currentData["progress"]["transId"]
 				if transactions['off_trans_id'] != currentTrans:
-					standard.endtransaction()
+					standard.endtransaction(transactions['off_trans_id'])
 				else:
 					pass
 			else:
-				standard.endtransaction()
+				standard.endtransaction(transactions['off_trans_id'])
 
 			print("Offline Transaction " + str(transactions['off_trans_id']) + " pushed")
 		except Exception as e:

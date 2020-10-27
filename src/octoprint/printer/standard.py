@@ -46,9 +46,16 @@ faHeaders = {
 
 faPayload = faDevice.copy()
 
-def endtransaction():
-    print("Ending Ticket")
-    faPayload['type'] = "update_end_time"
+def endtransaction(transid=None):
+    print("Ending Ticket: "+str(transid))
+    if transid is not None:
+        print("Offline")
+        faPayload['type'] = "offline_ticket_end"
+        faPayload['off_trans_id'] = transid
+    else:
+        print("Online")
+        faPayload['type'] = "update_end_time"
+
     r = requests.request("POST", faUrl + "api/flud.php", json=faPayload, headers=faHeaders, timeout=0.5)
     print(r.json())
 

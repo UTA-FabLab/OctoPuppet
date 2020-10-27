@@ -364,14 +364,23 @@ $(function() {
             if (!self.settings.feature_printCancelConfirmation()) {
                 OctoPrint.job.cancel();
             } else {
-                showConfirmationDialog({
-                    message: gettext("This will cancel your print."),
-                    cancel: gettext("No"),
-                    proceed: gettext("Yes"),
-                    onproceed: function() {
-                        OctoPrint.job.cancel();
-                    },
-                    nofade: true
+                $("#cancelIdModal").modal('show');
+                console.log("Showing kill confirm modal");
+                $("#cancelIdModal").on('shown', function() {
+                    $("#studentId1").val('');
+                    $("#studentId2").val('');
+                    $("#studentId2").focus();
+                    $("#studentIdVerification2").attr("disabled", "disabled");
+                });
+
+                $("#studentIdVerification2").unbind("click").on("click", function()
+                {
+                    if ( $("#studentId2").val().length != 10) {
+                        return false;
+                    }
+                    else{
+                    OctoPrint.job.cancel();
+                    }
                 });
             }
         };

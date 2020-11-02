@@ -2203,6 +2203,10 @@ ul.dropdown-menu li a {
   min-height: 540px;
   margin-bottom: 5px;
 }
+#settings_dialog .aboutlink,	
+#settings_dialog .systeminfolink {	
+    float: left	
+}
 #settings_dialog .aboutlink {
   float: left;
 }

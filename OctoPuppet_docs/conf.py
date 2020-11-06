@@ -32,8 +32,7 @@ author = 'Surbhi Zambad'
 master_doc = 'index'
 extensions = ['sphinx.ext.autodoc',
               "sphinx_rtd_theme",
-              "sphinx.ext.autosummary",
-              "numpydoc"
+              "sphinx.ext.autosummary"
               ]
 
 MOCK_MODULES = ['pylru', 'octoprint',

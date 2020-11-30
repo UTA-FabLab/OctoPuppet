@@ -123,7 +123,6 @@ date of first contribution):
   * [Khoi Pham](https://github.com/osubuu)
   * [Timofei Korostelev](https://github.com/chudsaviet)
   * [Federico Nembrini](https://github.com/FedericoNembrini)
-  * [Brian Vanderbusch](https://github.com/LongLiveCHIEF)
   * [Uri Shaked](https://github.com/urish)
   * [Brian Vanderbusch](https://github.com/LongLiveCHIEF)
   * [Charlie Powell](https://github.com/cp2004)

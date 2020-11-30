@@ -117,7 +117,7 @@ $(function () {
         };
 
         self.webcam_available_ratios = ["16:9", "4:3"];
-        self.webcam_available_videocodecs = ["mpeg2video", "libx264"];
+        self.webcam_available_videocodecs = ["libx264", "mpeg2video"];
 
         var auto_locale = {
             language: "_default",

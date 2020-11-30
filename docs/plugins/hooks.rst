@@ -608,7 +608,7 @@ This describes actually two hooks:
 octoprint.comm.protocol.gcode.<phase>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This describes actually four hooks:
+This actually describes four hooks:
 
   * ``octoprint.comm.protocol.gcode.queuing``
   * ``octoprint.comm.protocol.gcode.queued``

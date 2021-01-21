@@ -737,13 +737,14 @@ def gcodeFileCommand(filename, target):
 				else:
 					fileManager.move_folder(target, filename, destination)
 
-			elif command == "id":
-				if "trans_id" in data:
-					trans_id = data["trans_id"]
-					del data["trans_id"]
+	elif command == "id":
+		with Permissions.FILES_UPLOAD.require(403):
+			if "trans_id" in data:
+				trans_id = data["trans_id"]
+				del data["trans_id"]
 
-					fileManager.remove_additional_metadata(target, filename, "trans_id")
-					fileManager.set_additional_metadata(target, filename, "trans_id", trans_id)
+				fileManager.remove_additional_metadata(target, filename, "trans_id")
+				fileManager.set_additional_metadata(target, filename, "trans_id", trans_id)
 
 			return make_response("set ID to %s, current metadata is '%s'" % (trans_id, fileManager.get_metadata(target, filename)), 200)
 

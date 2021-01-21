@@ -76,7 +76,8 @@ def tryFabAppOrGetLocal(filename):
         return jsonify(response)
 
     except:
-        print("ALERT -- No connection to FabApp. Using local cache from " + fname)
+        print("ALERT -- Connection to FabApp failed. Using local cache from " + fname)
+        print("DEBUG: \n" + str(e))
         if filename == "flud":
             json_list = []
             trans_id = "OFF" + str(int(time.time()))

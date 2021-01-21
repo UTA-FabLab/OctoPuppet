@@ -1127,13 +1127,6 @@ def gcodeFileCommand(filename, target):
                     else:
                         fileManager.move_folder(target, filename, destination)
 
-    elif command == "id":
-        if "trans_id" in data:
-            trans_id = data["trans_id"]
-            del data["trans_id"]
-            fileManager.remove_additional_metadata(target, filename, "trans_id")
-            fileManager.set_additional_metadata(target, filename, "trans_id", trans_id)
-
             location = url_for(
                 ".readGcodeFile", target=target, filename=destination, _external=True
             )
@@ -1155,6 +1148,13 @@ def gcodeFileCommand(filename, target):
             r = make_response(jsonify(result), 201)
             r.headers["Location"] = location
             return r
+
+    elif command == "id":
+        if "trans_id" in data:
+            trans_id = data["trans_id"]
+            del data["trans_id"]
+            fileManager.remove_additional_metadata(target, filename, "trans_id")
+            fileManager.set_additional_metadata(target, filename, "trans_id", trans_id)
 
     return NO_CONTENT
 

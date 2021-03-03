@@ -105,8 +105,10 @@ $(function () {
                     }
 
                     // Show warning if connecting from what seems to be an external IP address, unless ignored
-                    var ignorePublicAddressWarning =
-                        localStorage["loginState.ignorePublicAddressWarning"];
+                    // Disabled for FabLab
+                    // var ignorePublicAddressWarning =
+                    //     localStorage["loginState.ignorePublicAddressWarning"];
+                    var ignorePublicAddressWarning = true;
                     if (ignorePublicAddressWarning === undefined) {
                         ignorePublicAddressWarning = false;
                     } else {

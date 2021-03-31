@@ -713,7 +713,7 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
         self._updateProgressData()
         self._setCurrentZ(None)
 
-	def get_transId(self):
+    def get_transId(self):
         filename = self._selectedFile["filename"]
         if self._comm is None:
             return None

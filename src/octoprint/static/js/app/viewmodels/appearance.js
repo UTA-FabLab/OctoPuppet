@@ -103,17 +103,17 @@ $(function () {
 
         self.brand = ko.pureComputed(function () {
             if (self.name()) return self.name();
-            else return gettext("OctoPrint");
+            else return gettext("OctoPuppet");
         });
 
         self.fullbrand = ko.pureComputed(function () {
-            if (self.name()) return gettext("OctoPrint") + ": " + self.name();
-            else return gettext("OctoPrint");
+            if (self.name()) return gettext("OctoPuppet") + ": " + self.name();
+            else return gettext("OctoPuppet");
         });
 
         self.title = ko.pureComputed(function () {
-            if (self.name()) return self.name() + " [" + gettext("OctoPrint") + "]";
-            else return gettext("OctoPrint");
+            if (self.name()) return self.name() + " [" + gettext("OctoPuppet") + "]";
+            else return gettext("OctoPuppet");
         });
 
         self.theme_color = ko.pureComputed(function () {

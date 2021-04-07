@@ -12,6 +12,7 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 import copy
 import logging
 import os
+import requests
 import threading
 import time
 
@@ -1687,6 +1688,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
                 self._dict(text=self.get_state_string(), flags=self._getStateFlags())
             )
 
+        endtransaction()
+
     def on_comm_print_job_cancelling(self, firmware_error=None, user=None):
         payload = self._payload_for_print_job_event(action_user=user)
         if payload:
@@ -1741,6 +1744,8 @@ class Printer(PrinterInterface, comm.MachineComPrintCallback):
             thread = threading.Thread(target=finalize)
             thread.daemon = True
             thread.start()
+
+        endtransaction()
 
     def on_comm_print_job_paused(self, suppress_script=False, user=None):
         payload = self._payload_for_print_job_event(

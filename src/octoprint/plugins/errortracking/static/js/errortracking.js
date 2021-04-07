@@ -12,6 +12,9 @@ $(function () {
             // already enabled?
             if (self.settings.settings.plugins.errortracking.enabled()) return;
 
+            // Exit if bundled software update plugin is disabled
+            if (!self.settings.settings.plugins.softwareupdate) return;
+
             // RC release channel?
             var releaseChannel = self.settings.settings.plugins.softwareupdate.octoprint_release_channel();
             if (releaseChannel === "rc/maintenance" || releaseChannel === "rc/devel") {

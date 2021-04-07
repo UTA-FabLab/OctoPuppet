@@ -65,7 +65,7 @@ def tryFabAppOrGetLocal(filename):
     print(faPayload)
     try:
         r = requests.request("POST", faUrl + "api/" + filename + ".php",
-                             json=faPayload, headers=faHeaders, timeout=0.5)
+                             json=faPayload, headers=faHeaders, timeout=(3, 9))
         response = r.json()
         print("Connection to FabApp successful. Updating " + fname)
         if filename == "flud":
@@ -75,7 +75,7 @@ def tryFabAppOrGetLocal(filename):
 
         return jsonify(response)
 
-    except:
+    except Exception as e:
         print("ALERT -- Connection to FabApp failed. Using local cache from " + fname)
         print("DEBUG: \n" + str(e))
         if filename == "flud":

@@ -274,6 +274,7 @@ default_settings = {
     },
     "folder": {
         "uploads": None,
+        "FabAppData": None,
         "timelapse": None,
         "timelapse_tmp": None,
         "logs": None,

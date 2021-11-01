@@ -48,7 +48,7 @@ def getLocalList():
 @api.route("/FabAppData/status", methods=["GET"])
 def FabAppStatus():
     try:
-        r = requests.get(faUrl + "index.php", timeout=1)
+        r = requests.get(faUrl + "index.php", timeout=3)
         r.raise_for_status()
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.HTTPError):
         return jsonify({"status": 500})
@@ -102,7 +102,7 @@ def tryFabAppOrGetLocal(filename):
 
             return jsonify(dummy_response)
         else:
-            with open(fname, "r") as f:
+            with open(fname, "r") as f:     #TODO: This needs to go to function
                 return jsonify(json.load(f))
 
 

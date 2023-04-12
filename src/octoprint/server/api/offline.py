@@ -48,7 +48,7 @@ def getLocalList():
 @api.route("/FabAppData/status", methods=["GET"])
 def FabAppStatus():
     try:
-        r = requests.get(faUrl + "index.php", timeout=3)
+        r = requests.get(faUrl + "index.php", timeout=3, verify=False)
         r.raise_for_status()
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.HTTPError):
         return jsonify({"status": 500})
@@ -65,7 +65,7 @@ def tryFabAppOrGetLocal(filename):
     print(faPayload)
     try:
         r = requests.request("POST", faUrl + "api/" + filename + ".php",
-                             json=faPayload, headers=faHeaders, timeout=(3, 9))
+                             json=faPayload, headers=faHeaders, timeout=(3, 9), verify=False)
         response = r.json()
         print("Connection to FabApp successful. Updating " + fname)
         if filename == "flud":
@@ -119,7 +119,7 @@ def sendOfflineData():
         del transactions['trans_id']
         try:
             r = requests.request("POST", faUrl + "api/flud.php",
-                                 json=transactions, headers=faHeaders)
+                                 json=transactions, headers=faHeaders, verify=False)
             response = r.json()
             transactions['upload_status'] = response['off_status']
             currentData = printer.get_current_data()

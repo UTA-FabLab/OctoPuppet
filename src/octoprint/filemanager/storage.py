@@ -933,9 +933,9 @@ class LocalFileStorage(StorageInterface):
             for line in file_object.stream():
                 line = str(line.strip())
                 if gcodePoly:
-                    if 'Estimated Build Time:' in line:
+                    if 'Estimated-in-GUI Build Time:' in line:
                         build_time = line
-                    if 'Ext 1' in line:
+                    if 'Estimated-in-GUI Build Cost:' in line:
                         build_mat_used = line
                 elif gcodePrusa:
                     if 'estimated printing time (normal mode)' in line:
@@ -1009,13 +1009,11 @@ class LocalFileStorage(StorageInterface):
 
             if gcodePoly:
                 re1 = r'.*?'  # Non-greedy match on filler
-                re2 = r'([+-]?\d*\.\d+)(?![-+0-9\.])'  # Float 1
-                re3 = r'.*?'  # Non-greedy match on filler
-                re4 = r'([+-]?\d*\.\d+)(?![-+0-9\.])'  # Float 2
+                re2 = r'\$([0-9]*\.?[0-9]+)'  # Float
 
-                rg = re.compile(re1 + re2 + re3 + re4, re.IGNORECASE | re.DOTALL)
+                rg = re.compile(re1 + re2, re.IGNORECASE | re.DOTALL)
                 r = rg.search(build_mat_used)
-                build_mat_used_str = r.group(2)
+                build_mat_used_str = r.group(1)
         else:
             print("WARNING - Missing material used data. Setting to 0")
             build_mat_used_str = 0
